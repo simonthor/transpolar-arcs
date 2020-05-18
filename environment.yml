@@ -1,0 +1,9 @@
+name: transpolar-arcs
+
+dependencies:
+  - python=3.8
+  - numpy
+  - matplotlib
+  - pandas
+  - geopack
+  - scipy
