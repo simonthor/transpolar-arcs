@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 from matplotlib import cm
 #import numpy as np
-from TPA.data_struct import *
-from TPA.data_extract import DataExtract
+from data_struct import *
+from data_extract import DataExtract
 from scipy.stats import mstats as st
 #from TPA import test_OMNI
 #import sys

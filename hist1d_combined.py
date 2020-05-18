@@ -1,8 +1,8 @@
 import datetime
 import matplotlib.pyplot as plt
 import numpy as np
-from TPA.data_struct import *
-from TPA.data_extract import DataExtract
+from data_struct import *
+from data_extract import DataExtract
 from TPA import test_OMNI
 
 tpa_dir = "data/"

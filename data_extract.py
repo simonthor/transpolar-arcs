@@ -1,4 +1,4 @@
-from TPA.data_struct import *
+from data_struct import *
 import datetime
 import pandas as pd
 
