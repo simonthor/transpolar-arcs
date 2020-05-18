@@ -1,37 +1,50 @@
-from data_struct import *
+# Builtins
+import warnings
 import datetime
+# Packages
 import pandas as pd
+# Self-written modules
+from data_structures.tpa import TPA
+from data_structures.tpa_dataset import TPADataset
 
 
 class DataExtract:
     def __init__(self, tpa_dir):
         self.tpa_dir = tpa_dir
 
-    def kullen_dataclean(self, dataset, filename="datafile_tpa_location.dat"):
-        """Extracting Kullen's data (dat)"""
+    def kullen_dataclean(self, filename="datafile_tpa_location.dat"):
+        """Extracting Kullen's data
+         Input file type: .dat
+         """
+
         filename = self.tpa_dir + filename
-        TPAs = dataset.tpas
+        TPAs = []
 
         with open(filename) as dat:
             kullen = dat.readlines()
 
         for line in kullen:
-            cl = line.split()
-            if line[0] not in "\n;" and cl[1][2] == "1":
-                motion = calc_motion(float(cl[3]), float(cl[6]))
-                #elif cl[1][2] == "2":
+            tpa_parameters = line.split()
+            if line[0] not in "\n;" and tpa_parameters[1][2] == "1":
+                motion = DataExtract.calc_motion(float(tpa_parameters[3]), float(tpa_parameters[6]))
+                # elif cl[1][2] == "2":
                 #    motion = "unknown"
-                #else:
+                # else:
                 #    continue
-                dadu = calc_dadu(float(cl[3]))
-                if cl[1][:2] != "bd":
-                    TPAs.append(TPA(dataset, datetime.datetime.strptime(cl[0] + line[11:15], "%y%m%d%H%M"), "n", moving=motion, dadu=dadu, dipole=True))
-                elif cl[1][:4] == "bd1h":
-                    TPAs.append(TPA(dataset, datetime.datetime.strptime(cl[0] + line[11:15], "%y%m%d%H%M"), "n", moving=motion, dadu=dadu, dipole=True))
+                dadu = DataExtract.calc_dadu(float(tpa_parameters[3]))
+                if tpa_parameters[1][:2] != "bd":
+                    TPAs.append(
+                        TPA(dataset, datetime.datetime.strptime(tpa_parameters[0] + line[11:15], "%y%m%d%H%M"), "n", moving=motion,
+                            dadu=dadu, dipole=True))
+                elif tpa_parameters[1][:4] == "bd1h":
+                    TPAs.append(
+                        TPA(dataset, datetime.datetime.strptime(tpa_parameters[0] + line[11:15], "%y%m%d%H%M"), "n", moving=motion,
+                            dadu=dadu, dipole=True))
 
         return TPAs
 
-    def cumnock0_dataclean(self, dataset, filename="Single_Multiple_Arcs_IMF_dipole_list_2015_AK_prel_dadu.xls", usecols="A, C, D, N", sheet_name="Sheet1"):
+    def cumnock0_dataclean(self, dataset, filename="Single_Multiple_Arcs_IMF_dipole_list_2015_AK_prel_dadu.xls",
+                           usecols="A, C, D, N", sheet_name="Sheet1"):
         """Extracting Judy's first data (excel)"""
 
         filename = self.tpa_dir + filename
@@ -50,7 +63,8 @@ class DataExtract:
                     break
             if num:
                 # Warning: Change the last timedelta object to vary the shift backwards in time
-                date = datetime.datetime.strptime(str(row[0]) + row[2][:row[2].find("-")], "%y%j%H%M%S") - datetime.timedelta(minutes=120)
+                date = datetime.datetime.strptime(str(row[0]) + row[2][:row[2].find("-")],
+                                                  "%y%j%H%M%S") - datetime.timedelta(minutes=120)
                 if "dadu" in filename:
                     dadu = row[3]
                 else:
@@ -59,8 +73,8 @@ class DataExtract:
 
         return TPAs
 
-    def cumnock1_dataclean(self, dataset, filename="listoftimes.xls", sheet_name="Sheet1",  usecols="A, G, M"):
-        """Extracting Judy's second data (excel)"""
+    def cumnock1_dataclean(self, dataset, filename="listoftimes.xls", sheet_name="Sheet1", usecols="A, G, M"):
+        """Extracting Cumnock's second data (excel)"""
         TPAs = dataset.tpas
         filename = self.tpa_dir + filename
 
@@ -71,23 +85,25 @@ class DataExtract:
                 break
             elif isinstance(row[0], int) or "00" in str(row[0]):
                 if len(str(row[0])) >= 5:
-                    TPAs.append(TPA(dataset, datetime.datetime.strptime(str(row[0]) + str(row[1]), "%y%j%X"), "n", moving="yes", dadu=row[2], dipole=True))
+                    TPAs.append(
+                        TPA(dataset, datetime.datetime.strptime(str(row[0]) + str(row[1]), "%y%j%X"), "n", moving="yes",
+                            dadu=row[2], dipole=True))
                 else:
-                    date = "0" * (5-len(str(row[0]))) + str(row[0]) + str(row[1])
+                    date = "0" * (5 - len(str(row[0]))) + str(row[0]) + str(row[1])
                     if len(usecols.split()) > 2:
                         dadu = row[2]
                     else:
                         dadu = None
-                    TPAs.append(TPA(dataset, datetime.datetime.strptime(date, "%y%j%X"), "n", moving="yes", dadu=dadu, dipole=True))
-        #for tpa in TPAs:
+                    TPAs.append(TPA(dataset, datetime.datetime.strptime(date, "%y%j%X"), "n", moving="yes", dadu=dadu,
+                                    dipole=True))
+        # for tpa in TPAs:
         #    print(tpa.date)
         return TPAs
 
     def cai_dataclean(self, dataset, filename=""):
-        """Empty function that will later be used for extracting Cai's dataset of TPAs from DMSP.
-        Dataset with conjugate TPAs.
+        """Function that will later be used for extracting Cai's dataset of TPAs from DMSP.
+        Includes conjugate TPAs.
         TODO: add this function when I have received the data"""
-        return
 
     def fear_fileclean(self, filename="Fear_TPA_data_frompaper.txt"):
         """Cleaning Fear's data to readable txt (txt)"""
@@ -122,19 +138,19 @@ class DataExtract:
                     except ValueError:
                         tpa = False
                     if tpa:
-                        l = line.split()
-                        if l[10] == "N":
+                        tpa_parameters = line.split()
+                        if tpa_parameters[10] == "N":
                             motion = "no"
-                        elif l[10] == "Y":
+                        elif tpa_parameters[10] == "Y":
                             motion = "yes"
                         else:
-                            motion = l[10]
+                            motion = tpa_parameters[10]
                             # TODO: better error message
-                            print("WARNING: input for motion is neither Yes nor No")
-                        dadu = calc_dadu(float(l[7]))
+                            warnings.warn("WARNING: input for motion is neither Yes nor No")
+                        dadu = DataExtract.calc_dadu(float(tpa_parameters[7]))
 
-                        TPAs.append(TPA(dataset, datetime.datetime.strptime(l[1] + l[2] + ":00", "%d-%b-%Y%X"),
-                                        hemisphere=l[9].lower(), moving=motion, dadu=dadu, dipole=True))
+                        TPAs.append(TPA(dataset, datetime.datetime.strptime(tpa_parameters[1] + tpa_parameters[2] + ":00", "%d-%b-%Y%X"),
+                                        hemisphere=tpa_parameters[9].lower(), moving=motion, dadu=dadu, dipole=True))
         else:
             with open(filename) as fear:
                 for line in fear:
@@ -144,14 +160,15 @@ class DataExtract:
                     except ValueError:
                         tpa = False
                     if tpa:
-                        l = line.split()
-                        TPAs.append(TPA(dataset, datetime.datetime.strptime(l[1] + l[2][:8], "%d-%b-%Y%X"), l[3], dipole=True))
+                        tpa_parameters = line.split()
+                        TPAs.append(
+                            TPA(dataset, datetime.datetime.strptime(tpa_parameters[1] + tpa_parameters[2][:8], "%d-%b-%Y%X"), tpa_parameters[3], dipole=True))
 
         return TPAs
 
-    def reidy_dataclean(self, dataset, filename="reidy_TPA_data.txt"):
+    def reidy_dataclean(self, filename="reidy_TPA_data.txt"):
         filename = self.tpa_dir + filename
-        TPAs = dataset.tpas
+        TPAs = []
         with open(filename) as reidy:
             for line in reidy:
                 if line[0] != "#":
@@ -166,35 +183,36 @@ class DataExtract:
                                         hemisphere=l[9].lower(), dipole=True, conj=False))
         return TPAs
 
+    @staticmethod
+    def calc_motion(mlt1, mlt2):
+        d = abs(mlt2 - mlt1)
+        if d > 12:
+            d = 24 - d
+        if d > 2:
+            motion = "yes"
+        else:
+            motion = "no"
 
-def calc_motion(mlt1, mlt2):
-    d = abs(mlt2 - mlt1)
-    if d > 12:
-        d = 24 - d
-    if d > 2:
-        motion = "yes"
-    else:
-        motion = "no"
+        return motion
 
-    return motion
+    @staticmethod
+    def calc_dadu(mlt):
+        if 0 < mlt <= 12:
+            dadu = "dawn"
+        else:
+            dadu = "dusk"
+        # else:
+        #    print("Unknown value of dadu (dawn or dusk): {}".format(mlt1))
+        #    dadu = None
 
-
-def calc_dadu(mlt):
-    if 0 < mlt <= 12:
-        dadu = "dawn"
-    else:
-        dadu = "dusk"
-    # else:
-    #    print("Unknown value of dadu (dawn or dusk): {}".format(mlt1))
-    #    dadu = None
-
-    return dadu
+        return dadu
 
 
+# Used for testing purposes
 if __name__ == "__main__":
-    a = Dataset("reidy", 20, 100, datetime.date(2000, 10, 20), datetime.date(2000, 10, 30))
-    b = DataExtract("data/")
-    b.reidy_dataclean(a)
-    print(len(a.tpas))
-    for tpa in a.tpas:
+    test_dataset = TPADataset("reidy", 20, 100, datetime.date(2000, 10, 20), datetime.date(2000, 10, 30))
+    data_extractor = DataExtract("data/")
+    test_dataset.append(data_extractor.reidy_dataclean())
+    print(len(test_dataset.tpas))
+    for tpa in test_dataset.tpas:
         print(tpa)

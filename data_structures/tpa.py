@@ -1,77 +1,11 @@
 import datetime
+from dataclasses import dataclass
 from geopack import geopack
 import numpy as np
-from TPA import test_OMNI
+import test_OMNI
+
 
 # TODO: Change to setattr everywhere instead
-
-
-class Dataset:
-    """TODO: Include docstring here"""
-    def __init__(self, dataset, avgcalctime, timeshift, starttime, endtime, tpalist=None):
-
-        self.name = dataset
-        self.vars = {"BxGSM": np.nan, "ByGSM": np.nan, "BzGSM": np.nan, "BmagGSM": np.nan,
-                     "vel": np.nan, "vB^2": np.nan}
-
-        if isinstance(avgcalctime, (int, float)):
-            self.avgcalctime = avgcalctime
-        else:
-            raise TypeError("avgcalctime must be float or int")
-
-        if isinstance(timeshift, (int, float)):
-            self.timeshift = timeshift
-        else:
-            raise TypeError("timeshift must be float or int")
-
-        if isinstance(starttime, datetime.datetime):
-            self.starttime = starttime
-        elif isinstance(starttime, datetime.date):
-            self.starttime = datetime.datetime(starttime.year, starttime.month, starttime.day, 0, 0, 0)
-        else:
-            raise TypeError("starttime must be datetime.datetime")
-
-        if isinstance(endtime, datetime.datetime):
-            self.endtime = endtime
-        elif isinstance(endtime, datetime.date):
-            self.endtime = datetime.datetime(endtime.year, endtime.month, endtime.day, 0, 0, 0)
-        else:
-            raise TypeError("endtime must be datetime.datetime")
-
-        if tpalist is not None:
-            self.tpas = tpalist
-        else:
-            self.tpas = []
-
-    def total(self, OMNI_dir, paras):
-        """"""
-        loadObj = test_OMNI.LoadOMNI(self.starttime, self.endtime, data_dir=OMNI_dir)
-        loadObj.laod_OMNI_data(paras_in=paras)
-
-        if "BxGSM" in paras and "ByGSM" in paras and "BzGSM" in paras:
-            val = np.sqrt(loadObj.paras["BxGSM"] ** 2 + loadObj.paras["BzGSM"] ** 2 + loadObj.paras["ByGSM"] ** 2)
-            self.vars["BmagGSM"] = val.reshape(val.size)
-
-        for key, val in loadObj.paras.items():
-            if key in paras:
-                #val = val[~np.isnan(val)]
-                val = val.reshape(val.size)
-                self.vars[key] = val
-
-    def get(self, var, exclude=None):
-        if isinstance(var, str):
-            retarr = np.array([getattr(tpa, var) for tpa in self.tpas])
-            if exclude is not None:
-                if exclude is np.nan:
-                    return retarr[~np.isnan(retarr)]
-                else:
-                    return retarr[retarr != exclude]
-            else:
-                return retarr
-        else:
-            raise TypeError("the input must be a str")
-
-
 class TPA:
     """TODO: Include docstring"""
     def __init__(self, dataset, date, hemisphere=None, dadu=None, moving=None, dipole=None, **kwargs):
