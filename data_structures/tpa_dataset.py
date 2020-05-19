@@ -17,8 +17,10 @@ class TPADataset:
     time_shift: float
     start_time: dt.datetime
     end_time: dt.datetime
+    # TODO: bad hard coding of variables
     total: dict = field(default_factory=lambda: {"BxGSM": [], "ByGSM": [], "BzGSM": [], "BmagGSM": [], "vel": [], "vB^2": []})
     tpa_values: dict = field(init=False)
+    tpa_properties: dict = field(init=False, default_factory=lambda: {})
 
     def __post_init__(self):
         self.tpa_values = self.total.copy()
@@ -41,6 +43,12 @@ class TPADataset:
                 self.total[key] = val
 
     def append(self, tpa: TPA):
-        for variable in self.total.keys():
-            if hasattr(tpa, variable):
-                self.tpa_values[variable].append(getattr(tpa, variable))
+        for value in self.total.keys():
+            if hasattr(tpa, value):
+                self.tpa_values[value] = np.append(self.tpa_values[value], getattr(tpa, value))
+
+        for prop in tpa.properties:
+            if prop in self.tpa_properties.keys():
+                self.tpa_properties[prop] = np.append(self.tpa_properties[prop], getattr(tpa, prop))
+            else:
+                self.tpa_properties[prop] = np.array([getattr(tpa, prop)])

@@ -13,8 +13,9 @@ class DataExtract:
         self.tpa_dir = tpa_dir
         self.name_to_function = {'Fear & Milan (2012)': self.fear_dataclean,
                                  'Kullen et al. (2002)': self.kullen_dataclean,
-                                 'Cumnock et al. (2009)': self.cumnock1_dataclean,
-                                 'Reidy et al. (2018)': self.reidy_dataclean}
+                                 'Cumnock et al. (2009)': self.cumnock0_dataclean,
+                                 'Reidy et al. (2018)': self.reidy_dataclean,
+                                 'Cumnock et al. (2005)': self.cumnock1_dataclean}
 
     def get_tpas(self, dataset_name, *args, **kwargs):
         retriever_function = self.name_to_function[dataset_name]

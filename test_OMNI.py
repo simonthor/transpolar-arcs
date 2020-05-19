@@ -13,7 +13,6 @@ class LoadOMNI:
         year = dt_start.year
         month = dt_start.month
         for i in range(diff_month+1):
-
             dt = datetime.datetime(year, month, 1)
             filename = 'OMNI_1min_' + dt.strftime('%Y%m') + '_Lv1.mat'
             data_file_list.append(filename)
