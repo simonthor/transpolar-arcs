@@ -6,5 +6,6 @@ dependencies:
   - matplotlib
   - pandas
   - scipy
+  - xlrd
   - pip:
       - geopack
