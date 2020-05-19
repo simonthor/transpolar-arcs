@@ -1,12 +1,11 @@
 import datetime as dt
 from dataclasses import dataclass, field
-from typing import Union, List
+from typing import Union, List, Sequence
 from geopack import geopack
 import numpy as np
 import test_OMNI
 
 
-# TODO: Change to setattr everywhere instead
 @dataclass
 class TPA:
     """Dataclass for storing information about a single transpolar arc."""
@@ -34,10 +33,13 @@ class TPA:
         returns: calculated parameters
         """
         retrieved_parameters = {}
+        if isinstance(parameters, str):
+            parameters = [parameters]
+
         if 'dipole' in parameters:
             self.get_dipole_data(avgcalctime, timeshift)
             retrieved_parameters['dipole'] = self.dipole
-        parameters.remove('dipole')
+            parameters.remove('dipole')
 
         start_time = self.date - dt.timedelta(minutes=timeshift + avgcalctime)
         end_time = self.date - dt.timedelta(minutes=timeshift)
@@ -47,7 +49,6 @@ class TPA:
         if "BxGSM" in parameters and "ByGSM" in parameters and "BzGSM" in parameters:
             self.BmagGSM = np.nanmean(np.sqrt(OMNI_data_loader.paras["BxGSM"] ** 2 + OMNI_data_loader.paras["BzGSM"] ** 2 + OMNI_data_loader.paras["ByGSM"] ** 2))
 
-        # TODO?: cleaner code here?
         for key, val in OMNI_data_loader.paras.items():
             if key in parameters:
                 clean_vals = val[~np.isnan(val)]

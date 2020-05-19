@@ -17,15 +17,17 @@ class TPADataset:
     time_shift: float
     start_time: dt.datetime
     end_time: dt.datetime
-    total: dict = field(default={"BxGSM": [], "ByGSM": [], "BzGSM": [], "BmagGSM": [], "vel": [], "vB^2": []})
+    total: dict = field(default_factory=lambda: {"BxGSM": [], "ByGSM": [], "BzGSM": [], "BmagGSM": [], "vel": [], "vB^2": []})
     tpa_values: dict = field(init=False)
 
     def __post_init__(self):
         self.tpa_values = self.total.copy()
 
-    # TODO: add docstring
-    def get_dataset_parameters(self, OMNI_dir, paras):
+    def get_dataset_parameters(self, OMNI_dir: str, paras: Union[List[str], str]):
         """Loads the value of parameters for the entire period of the dataset."""
+        if isinstance(paras, str):
+            paras = [paras]
+
         OMNI_data_loader = test_OMNI.LoadOMNI(self.start_time, self.end_time, data_dir=OMNI_dir)
         OMNI_data_loader.load_OMNI_data(paras_in=paras)
 
@@ -52,10 +54,10 @@ class TPADataset:
         else:
             return return_value
 
-    def append(self, TPAs: Union[List[TPA], TPA]):
+    def append(self, tpa: TPA):
         for variable in self.total.keys():
-            if hasattr(TPAs[0], variable):
-                np.concatenate((self.tpa_values[variable], [getattr(tpa, variable) for tpa in TPAs]))
+            if hasattr(tpa, variable):
+                self.tpa_values[variable].append(getattr(tpa, variable))
 
     # def __init__(self, dataset, avgcalctime, timeshift, starttime, endtime, tpalist=None):
     #
