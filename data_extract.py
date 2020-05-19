@@ -1,6 +1,6 @@
 # Builtins
 import warnings
-import datetime
+import datetime as dt
 # Packages
 import pandas as pd
 # Self-written modules
@@ -8,15 +8,25 @@ from data_structures.tpa import TPA
 from data_structures.tpa_dataset import TPADataset
 
 
+# TODO: move to data_structures
 class DataExtract:
+
     def __init__(self, tpa_dir):
         self.tpa_dir = tpa_dir
+        # TODO?: make static variable
+        self.name_to_function = {'Fear & Milan (2012)': self.fear_dataclean,
+                                 'Kullen et al. (2002)': self.kullen_dataclean,
+                                 'Cumnock et al. (2009)': self.cumnock0_dataclean,
+                                 'Reidy et al. (2018)': self.reidy_dataclean}
+
+    def get_tpas(self, dataset_name, *args, **kwargs):
+        retriever_function = self.name_to_function[dataset_name]
+        return retriever_function(*args, **kwargs)
 
     def kullen_dataclean(self, filename="datafile_tpa_location.dat"):
         """Extracting Kullen's data
          Input file type: .dat
          """
-
         filename = self.tpa_dir + filename
         TPAs = []
 
@@ -34,18 +44,16 @@ class DataExtract:
                 dadu = DataExtract.calc_dadu(float(tpa_parameters[3]))
                 if tpa_parameters[1][:2] != "bd":
                     TPAs.append(
-                        TPA(dataset, datetime.datetime.strptime(tpa_parameters[0] + line[11:15], "%y%m%d%H%M"), "n", moving=motion,
-                            dadu=dadu, dipole=True))
+                        TPA(dt.datetime.strptime(tpa_parameters[0] + line[11:15], "%y%m%d%H%M"), hemisphere="n", moving=motion, dadu=dadu))
                 elif tpa_parameters[1][:4] == "bd1h":
                     TPAs.append(
-                        TPA(dataset, datetime.datetime.strptime(tpa_parameters[0] + line[11:15], "%y%m%d%H%M"), "n", moving=motion,
-                            dadu=dadu, dipole=True))
+                        TPA(dt.datetime.strptime(tpa_parameters[0] + line[11:15], "%y%m%d%H%M"), hemisphere="n", moving=motion, dadu=dadu))
 
         return TPAs
 
-    def cumnock0_dataclean(self, dataset, filename="Single_Multiple_Arcs_IMF_dipole_list_2015_AK_prel_dadu.xls",
+    def cumnock0_dataclean(self, filename="Single_Multiple_Arcs_IMF_dipole_list_2015_AK_prel_dadu.xls",
                            usecols="A, C, D, N", sheet_name="Sheet1"):
-        """Extracting Judy's first data (excel)"""
+        """Extracting Cumnock's first data (excel)"""
 
         filename = self.tpa_dir + filename
         TPAs = dataset.tpas
@@ -63,17 +71,17 @@ class DataExtract:
                     break
             if num:
                 # Warning: Change the last timedelta object to vary the shift backwards in time
-                date = datetime.datetime.strptime(str(row[0]) + row[2][:row[2].find("-")],
-                                                  "%y%j%H%M%S") - datetime.timedelta(minutes=120)
+                date = dt.datetime.strptime(str(row[0]) + row[2][:row[2].find("-")],
+                                                  "%y%j%H%M%S") - dt.timedelta(minutes=120)
                 if "dadu" in filename:
                     dadu = row[3]
                 else:
                     dadu = None
-                TPAs.append(TPA(dataset, date, row[1], moving="yes", dadu=dadu, dipole=True))
+                TPAs.append(TPA(date, row[1], moving="yes", dadu=dadu))
 
         return TPAs
 
-    def cumnock1_dataclean(self, dataset, filename="listoftimes.xls", sheet_name="Sheet1", usecols="A, G, M"):
+    def cumnock1_dataclean(self, filename="listoftimes.xls", sheet_name="Sheet1", usecols="A, G, M"):
         """Extracting Cumnock's second data (excel)"""
         TPAs = dataset.tpas
         filename = self.tpa_dir + filename
@@ -86,21 +94,19 @@ class DataExtract:
             elif isinstance(row[0], int) or "00" in str(row[0]):
                 if len(str(row[0])) >= 5:
                     TPAs.append(
-                        TPA(dataset, datetime.datetime.strptime(str(row[0]) + str(row[1]), "%y%j%X"), "n", moving="yes",
-                            dadu=row[2], dipole=True))
+                        TPA(dt.datetime.strptime(str(row[0]) + str(row[1]), "%y%j%X"), "n", moving="yes", dadu=row[2]))
                 else:
                     date = "0" * (5 - len(str(row[0]))) + str(row[0]) + str(row[1])
                     if len(usecols.split()) > 2:
                         dadu = row[2]
                     else:
                         dadu = None
-                    TPAs.append(TPA(dataset, datetime.datetime.strptime(date, "%y%j%X"), "n", moving="yes", dadu=dadu,
-                                    dipole=True))
+                    TPAs.append(TPA(dt.datetime.strptime(date, "%y%j%X"), "n", moving="yes", dadu=dadu))
         # for tpa in TPAs:
         #    print(tpa.date)
         return TPAs
 
-    def cai_dataclean(self, dataset, filename=""):
+    def cai_dataclean(self, filename=""):
         """Function that will later be used for extracting Cai's dataset of TPAs from DMSP.
         Includes conjugate TPAs.
         TODO: add this function when I have received the data"""
@@ -124,10 +130,9 @@ class DataExtract:
         with open("fear_TPA_data.txt", "w") as fear:
             fear.write(clean)
 
-    def fear_dataclean(self, dataset, filename="fear_TPA_data_frompaper.txt"):
+    def fear_dataclean(self, filename="fear_TPA_data_frompaper.txt"):
         """Extracting Fear's data (txt)"""
         filename = self.tpa_dir + filename
-        TPAs = dataset.tpas
 
         if "frompaper" in filename:
             with open(filename) as fear:
@@ -149,8 +154,9 @@ class DataExtract:
                             warnings.warn("WARNING: input for motion is neither Yes nor No")
                         dadu = DataExtract.calc_dadu(float(tpa_parameters[7]))
 
-                        TPAs.append(TPA(dataset, datetime.datetime.strptime(tpa_parameters[1] + tpa_parameters[2] + ":00", "%d-%b-%Y%X"),
-                                        hemisphere=tpa_parameters[9].lower(), moving=motion, dadu=dadu, dipole=True))
+                        TPAs.append(TPA(dt.datetime.strptime(tpa_parameters[1] + tpa_parameters[2] + ":00",
+                                                                   '%d-%b-%Y%X'),
+                                        hemisphere=tpa_parameters[9].lower(), moving=motion, dadu=dadu))
         else:
             with open(filename) as fear:
                 for line in fear:
@@ -161,8 +167,7 @@ class DataExtract:
                         tpa = False
                     if tpa:
                         tpa_parameters = line.split()
-                        TPAs.append(
-                            TPA(dataset, datetime.datetime.strptime(tpa_parameters[1] + tpa_parameters[2][:8], "%d-%b-%Y%X"), tpa_parameters[3], dipole=True))
+                        TPAs.append(TPA(dt.datetime.strptime(tpa_parameters[1] + tpa_parameters[2][:8], "%d-%b-%Y%X"), tpa_parameters[3]))
 
         return TPAs
 
@@ -174,13 +179,10 @@ class DataExtract:
                 if line[0] != "#":
                     l = line.split()
                     if l[9] == "NS":
-                        TPAs.append(TPA(dataset, datetime.datetime.strptime(l[1] + l[2] + l[3] + l[4], "%d%b%Y%H:%M"),
-                                        hemisphere="n", dipole=True, conj=True))
-                        TPAs.append(TPA(dataset, datetime.datetime.strptime(l[1] + l[2] + l[3] + l[4], "%d%b%Y%H:%M"),
-                                        hemisphere="s", dipole=True, conj=True))
+                        TPAs.append(TPA(dt.datetime.strptime(l[1] + l[2] + l[3] + l[4], "%d%b%Y%H:%M"), hemisphere="n", conjugate=True))
+                        TPAs.append(TPA(dt.datetime.strptime(l[1] + l[2] + l[3] + l[4], "%d%b%Y%H:%M"), hemisphere="s", conjugate=True))
                     else:
-                        TPAs.append(TPA(dataset, datetime.datetime.strptime(l[1] + l[2] + l[3] + l[4], "%d%b%Y%H:%M"),
-                                        hemisphere=l[9].lower(), dipole=True, conj=False))
+                        TPAs.append(TPA(dt.datetime.strptime(l[1] + l[2] + l[3] + l[4], "%d%b%Y%H:%M"), hemisphere=l[9].lower(), conjugate=False))
         return TPAs
 
     @staticmethod
@@ -210,7 +212,7 @@ class DataExtract:
 
 # Used for testing purposes
 if __name__ == "__main__":
-    test_dataset = TPADataset("reidy", 20, 100, datetime.date(2000, 10, 20), datetime.date(2000, 10, 30))
+    test_dataset = TPADataset("reidy", 20, 100, dt.date(2000, 10, 20), dt.date(2000, 10, 30))
     data_extractor = DataExtract("data/")
     test_dataset.append(data_extractor.reidy_dataclean())
     print(len(test_dataset.tpas))
