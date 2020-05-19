@@ -16,15 +16,6 @@ class TPA:
     conjugate: bool = True
     dipole: float = field(init=False, default=np.nan)
 
-    # timeshift: int = None
-    # avgcalctime: int = None
-    # # TODO?: remove
-    # BxGSM: Union[np.ndarray, List[float], float] = np.nan
-    # ByGSM: Union[np.ndarray, List[float], float] = np.nan
-    # BzGSM: Union[np.ndarray, List[float], float] = np.nan
-    # BmagGSM: Union[np.ndarray, List[float], float] = np.nan
-    # vel: Union[np.ndarray, List[float], float] = np.nan
-
     def __post_init__(self):
         self.dipole = np.nan
 
