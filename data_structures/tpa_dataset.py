@@ -1,7 +1,7 @@
 # Standard library
 import datetime as dt
 from typing import Union, List, Dict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 # Packages
 import numpy as np
 # Self-written modules
@@ -12,14 +12,50 @@ from data_structures.tpa import TPA
 @dataclass
 class TPADataset:
     """Dataclass for containing the data of transpolar arcs."""
-    dataset_name: str
+    name: str
     average_calctime: float
     time_shift: float
     start_time: dt.datetime
     end_time: dt.datetime
+    total: dict = field(default={"BxGSM": [], "ByGSM": [], "BzGSM": [], "BmagGSM": [], "vel": [], "vB^2": []})
+    tpa_values: dict = field(init=False)
 
     def __post_init__(self):
-        self.vars: Dict = {"BxGSM": [], "ByGSM": [], "BzGSM": [], "BmagGSM": [], "vel": [], "vB^2": []}
+        self.tpa_values = self.total.copy()
+
+    # TODO: add docstring
+    def get_dataset_parameters(self, OMNI_dir, paras):
+        """Loads the value of parameters for the entire period of the dataset."""
+        OMNI_data_loader = test_OMNI.LoadOMNI(self.start_time, self.end_time, data_dir=OMNI_dir)
+        OMNI_data_loader.load_OMNI_data(paras_in=paras)
+
+        if "BxGSM" in paras and "ByGSM" in paras and "BzGSM" in paras:
+            val = np.sqrt(OMNI_data_loader.paras["BxGSM"] ** 2 + OMNI_data_loader.paras["BzGSM"] ** 2 + OMNI_data_loader.paras["ByGSM"] ** 2)
+            self.total["BmagGSM"] = val.reshape(val.size)
+
+        for key, val in OMNI_data_loader.paras.items():
+            if key in paras:
+                #val = val[~np.isnan(val)]
+                val = val.reshape(val.size)
+                self.total[key] = val
+
+    # TODO?: remove
+    def get(self, var: str, exclude=None):
+        """A getter method for TPA variables (e.g. 'BxGSM').
+         Returns the value of """
+        return_value = self.total[var]
+        if exclude is not None:
+            if exclude is np.nan:
+                return return_value[~np.isnan(return_value)]
+            else:
+                return return_value[return_value != exclude]
+        else:
+            return return_value
+
+    def append(self, TPAs: Union[List[TPA], TPA]):
+        for variable in self.total.keys():
+            if hasattr(TPAs[0], variable):
+                np.concatenate((self.tpa_values[variable], [getattr(tpa, variable) for tpa in TPAs]))
 
     # def __init__(self, dataset, avgcalctime, timeshift, starttime, endtime, tpalist=None):
     #
@@ -55,37 +91,3 @@ class TPADataset:
     #         self.tpas = tpalist
     #     else:
     #         self.tpas = []
-
-    # TODO: add docstring
-    def total(self, OMNI_dir, paras):
-        """"""
-        loadObj = test_OMNI.LoadOMNI(self.start_time, self.end_time, data_dir=OMNI_dir)
-        loadObj.laod_OMNI_data(paras_in=paras)
-
-        if "BxGSM" in paras and "ByGSM" in paras and "BzGSM" in paras:
-            val = np.sqrt(loadObj.paras["BxGSM"] ** 2 + loadObj.paras["BzGSM"] ** 2 + loadObj.paras["ByGSM"] ** 2)
-            self.vars["BmagGSM"] = val.reshape(val.size)
-
-        for key, val in loadObj.paras.items():
-            if key in paras:
-                #val = val[~np.isnan(val)]
-                val = val.reshape(val.size)
-                self.vars[key] = val
-
-    # TODO?: remove
-    def get(self, var: str, exclude=None):
-        """A getter method for TPA variables (e.g. 'BxGSM').
-         Returns the value of """
-        return_value = self.vars[var]
-        if exclude is not None:
-            if exclude is np.nan:
-                return return_value[~np.isnan(return_value)]
-            else:
-                return return_value[return_value != exclude]
-        else:
-            return return_value
-
-    def append(self, TPAs: Union[List[TPA], TPA]):
-        for tpa in TPAs:
-            for var in self.vars.keys():
-                self.vars[var].append(getattr(tpa, var))
