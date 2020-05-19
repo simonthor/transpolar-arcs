@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     loadObj = test_OMNI.LoadOMNI(dt_start, dt_stop, data_dir=data_dir)
     # loadObj.laod_OMNI_data() # load all the parameters
-    loadObj.laod_OMNI_data(paras_in=paras_in)
+    loadObj.load_OMNI_data(paras_in=paras_in)
 
     # add dipole tilt angle to loadObj
     loadObj.load_addition_dipole_tilt(solarwind='on', both='on')

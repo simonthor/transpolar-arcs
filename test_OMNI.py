@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     loadObj = test_OMNI.LoadOMNI(dt_start, dt_stop, data_dir=data_dir)
     # loadObj.laod_OMNI_data() # load all the parameters
-    loadObj.laod_OMNI_data(paras_in=paras_in)
+    loadObj.load_OMNI_data(paras_in=paras_in)
     BxGSM = loadObj.paras['BxGSM']
     datetimelist = loadObj.paras['datetime']
 
@@ -52,7 +52,7 @@ class LoadOMNI(object):
         self.dt_ranges = dt_range_list
         self.data_dir = data_dir
 
-    def laod_OMNI_data(self, paras_in=None):
+    def load_OMNI_data(self, paras_in=None):
         full_para_list = ['ID MF', 'ID PL', 'n  MF', 'n  PL', 'Inter',
                           'Dt', 'RMSDt', 'RMSMi', 'DBOT ', '<B>',
                           'BxGSE', 'ByGSE', 'BzGSE', 'ByGSM', 'BzGSM',
