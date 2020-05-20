@@ -1,4 +1,4 @@
-# Builtins
+# Standard library
 import warnings
 import datetime as dt
 # Packages
@@ -7,7 +7,6 @@ import pandas as pd
 from data_structures.tpa import TPA
 
 
-# TODO: move to data_structures
 class DataExtract:
     def __init__(self, tpa_dir):
         self.tpa_dir = tpa_dir
@@ -198,14 +197,3 @@ class DataExtract:
 
         return dadu
 
-
-# Used for testing purposes
-if __name__ == "__main__":
-    from data_structures.tpa_dataset import TPADataset
-
-    test_dataset = TPADataset("reidy", 20, 100, dt.date(2000, 10, 20), dt.date(2000, 10, 30))
-    data_extractor = DataExtract("data/")
-    test_dataset.append(data_extractor.reidy_dataclean())
-    print(len(test_dataset.tpas))
-    for tpa in test_dataset.tpas:
-        print(tpa)

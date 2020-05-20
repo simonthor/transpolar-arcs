@@ -1,9 +1,9 @@
 import datetime as dt
 from dataclasses import dataclass, field
-from typing import Union, List, Sequence
+from typing import List
 from geopack import geopack
 import numpy as np
-import test_OMNI
+from data_extraction import test_OMNI
 
 
 @dataclass
@@ -47,8 +47,8 @@ class TPA:
                     setattr(self, key, np.nan)
 
         # Adjusting for hemisphere
-        if hasattr(self, 'BxGSM') and self.hemisphere == 's':
-            self.BxGSM *= -1
+        if hasattr(self, 'BxGSE') and self.hemisphere == 's':
+            self.BxGSE *= -1
             self.dipole *= -1
 
     def get_dipole_data(self, avgcalctime, timeshift):

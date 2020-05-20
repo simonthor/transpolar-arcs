@@ -4,6 +4,18 @@ import numpy
 
 
 class LoadOMNI:
+    full_para_list = ['ID MF', 'ID PL', 'n  MF', 'n  PL', 'Inter',
+                      'Dt', 'RMSDt', 'RMSMi', 'DBOT ', '<B>',
+                      'BxGSE', 'ByGSE', 'BzGSE', 'ByGSM', 'BzGSM',
+                      'RMSBs', 'RMSBv', 'vel', 'vxGSE', 'vyGSE',
+                      'vzGSE', 'n', 'Temp', 'Pdyn', 'Ey',
+                      'beta', 'MA', 'XGSE', 'YGSE', 'ZGSE',
+                      'XBow', 'YBow', 'ZBow', 'AE', 'AL',
+                      'AU', 'SYM/D', 'SYM/H', 'ASY/D', 'ASY/H',
+                      'PC-N', 'Mms', 'clock', 'New07', 'Bt',
+                      'E_sw '
+                      ]
+
     def __init__(self, dt_start, dt_stop, data_dir=None):
 
         diff_month = (dt_stop.year - dt_start.year) * 12 + dt_stop.month - dt_start.month
@@ -34,20 +46,9 @@ class LoadOMNI:
         self.data_dir = data_dir
 
     def load_OMNI_data(self, paras_in=None):
-        full_para_list = ['ID MF', 'ID PL', 'n  MF', 'n  PL', 'Inter',
-                          'Dt', 'RMSDt', 'RMSMi', 'DBOT ', '<B>',
-                          'BxGSE', 'ByGSE', 'BzGSE', 'ByGSM', 'BzGSM',
-                          'RMSBs', 'RMSBv', 'vel', 'vxGSE', 'vyGSE',
-                          'vzGSE', 'n', 'Temp', 'Pdyn', 'Ey',
-                          'beta', 'MA', 'XGSE', 'YGSE', 'ZGSE',
-                          'XBow', 'YBow', 'ZBow', 'AE', 'AL',
-                          'AU', 'SYM/D', 'SYM/H', 'ASY/D', 'ASY/H',
-                          'PC-N', 'Mms', 'clock', 'New07', 'Bt',
-                          'E_sw '
-                          ]
-        para_dict = dict((paraname, ind) for ind, paraname in enumerate(full_para_list))
+        para_dict = dict((paraname, ind) for ind, paraname in enumerate(LoadOMNI.full_para_list))
         if paras_in is None:
-            paras_in = full_para_list
+            paras_in = LoadOMNI.full_para_list
         paras = dict((paraname, numpy.empty(0)) for paraname in paras_in)
         paras['datetime'] = numpy.empty(0, dtype=numpy.datetime64)
         for ind_f, filename in enumerate(self.data_files):

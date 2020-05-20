@@ -1,11 +1,11 @@
 # Standard library
 import datetime as dt
-from typing import Union, List, Dict
+from typing import Union, List
 from dataclasses import dataclass, field
 # Packages
 import numpy as np
 # Self-written modules
-import test_OMNI
+from data_extraction.test_OMNI import LoadOMNI
 from data_structures.tpa import TPA
 
 
@@ -17,8 +17,7 @@ class TPADataset:
     time_shift: float
     start_time: dt.datetime
     end_time: dt.datetime
-    # TODO: bad hard coding of variables
-    total: dict = field(default_factory=lambda: {"BxGSM": [], "ByGSM": [], "BzGSM": [], "BmagGSM": [], "vel": [], "vB^2": []})
+    total: dict = field(default_factory=lambda: dict((paraname, []) for paraname in LoadOMNI.full_para_list))
     tpa_values: dict = field(init=False)
     tpa_properties: dict = field(init=False, default_factory=lambda: {})
 
@@ -30,12 +29,8 @@ class TPADataset:
         if isinstance(paras, str):
             paras = [paras]
 
-        OMNI_data_loader = test_OMNI.LoadOMNI(self.start_time, self.end_time, data_dir=OMNI_dir)
+        OMNI_data_loader = LoadOMNI(self.start_time, self.end_time, data_dir=OMNI_dir)
         OMNI_data_loader.load_OMNI_data(paras_in=paras)
-
-        if "BxGSM" in paras and "ByGSM" in paras and "BzGSM" in paras:
-            val = np.sqrt(OMNI_data_loader.paras["BxGSM"] ** 2 + OMNI_data_loader.paras["BzGSM"] ** 2 + OMNI_data_loader.paras["ByGSM"] ** 2)
-            self.total["BmagGSM"] = val.reshape(val.size)
 
         for key, val in OMNI_data_loader.paras.items():
             if key in paras:
