@@ -2,8 +2,7 @@ import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 from data_struct import *
-from data_extract import DataExtract
-from TPA import test_OMNI
+from data_extraction.tpa_extract import DataExtract
 
 tpa_dir = "data/"
 OMNI_dir = 'C:/Users/simon/MATLABProjects/Data/OMNI/OMNI_1min_Lv1/'
@@ -31,7 +30,7 @@ datasets = [Dataset("Fear & Milan (2012)", avgcalctime, timeshift[0], datetime.d
 # Extracting IMF during the period of the dataset and loading it into the datasets
 for i, dataset in enumerate(datasets):
     print("loading background (%i/%i)" % (i + 1, len(datasets)))
-    dataset.total(OMNI_dir, paras_in)
+    dataset.get_dataset_parameters(OMNI_dir, paras_in)
     print("Background loaded")
 
 # Loading TPAs into the datasets
@@ -50,7 +49,7 @@ for i, dataset in enumerate(datasets):
     clean_tpas[dn] = np.empty(len(dataset.tpas), dtype=bool)
     dataset.timeshift = ts
     for tpa in dataset.tpas:
-        tpa.avg(OMNI_dir, paras_in)
+        tpa.get_parameters(OMNI_dir, paras_in)
         # Adjust for hemisphere
         if hemadjust and tpa.hem == "s":
             tpa.dipole *= -1
@@ -105,7 +104,7 @@ bg = np.array([np.nan])
 fg = np.array([np.nan])
 
 for d in datasets:
-    bg = np.append(bg, d.vars[variable])
+    bg = np.append(bg, d.total[variable])
     fg = np.append(fg, d.get(variable))
 
 bg = bg[~np.isnan(bg)]

@@ -2,8 +2,7 @@
 #import sys
 import matplotlib.pyplot as plt
 #import numpy as np
-from data_struct import *
-from data_extract import DataExtract
+from data_extraction.tpa_extract import DataExtract
 #from TPA import test_OMNI
 
 

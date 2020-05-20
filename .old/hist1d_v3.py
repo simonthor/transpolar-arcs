@@ -1,42 +1,42 @@
-#import datetime
+import datetime as dt
 #import sys
 import matplotlib.pyplot as plt
 import numpy as np
-from data_struct import *
-from data_extract import DataExtract
+from data_structures.tpa_dataset import TPADataset
+from data_extraction.tpa_extract import DataExtract
 #from TPA import test_OMNI
 
-tpa_dir = "data/"
-OMNI_dir = 'C:/Users/simon/MATLABProjects/Data/OMNI/OMNI_1min_Lv1/'
+tpa_dir = 'data/'
+OMNI_data_dir = r'C:\Users\simon\MATLABProjects\KTH research\Data\OMNI\OMNI_1min_Lv1'
 # TODO: automate plotting labels, axis limits, paras_in etc using variable instead of paras_in
 variable = "vB^2"
-#set_paras_in(parameter)
 paras_in = ['vel', 'BxGSM', 'ByGSM', 'BzGSM']
-plotfig = False
-savefig = True
+plotfig = True
+savefig = False
 avgcalctime = 20  # minutes
 timeshift = [100]
 ts = timeshift[0]
 hemadjust = True
 norm = True
 ylim = [35]
-filename = "results/TPA_hist_{}_all_{}_{}minavg{}{}{}_reidy.pdf"
+figure_filename = "results/TPA_hist_{}_all_{}_{}minavg{}{}{}_reidy.pdf"
 
 print("Creating datasets")
-datasets = [Dataset("Fear & Milan (2012)", avgcalctime, timeshift[0], datetime.date(2000, 6, 1), datetime.date(2005, 10, 1)),
-            Dataset("Kullen et al. (2002)", avgcalctime, timeshift[0], datetime.date(1998, 12, 1), datetime.date(1999, 3, 1)),
-            Dataset("Cumnock et al. (2009)", avgcalctime, timeshift[0] + 120, datetime.date(1996, 1, 1), datetime.date(1999, 1, 1)),
-            Dataset("Reidy et al. (2018)", avgcalctime, timeshift[0], datetime.date(2015, 12, 1), datetime.date(2016, 1, 1))
-            #Dataset("Cumnock (2005)", avgcalctime, timeshift[0], datetime.date(1996, 3, 1), datetime.date(2000, 10, 1))
+datasets = [TPADataset("Fear & Milan (2012)", avgcalctime, timeshift[0], dt.date(2000, 6, 1), dt.date(2005, 10, 1)),
+            TPADataset("Kullen et al. (2002)", avgcalctime, timeshift[0], dt.date(1998, 12, 1), dt.date(1999, 3, 1)),
+            TPADataset("Cumnock et al. (2009)", avgcalctime, timeshift[0] + 120, dt.date(1996, 1, 1), dt.date(1999, 1, 1)),
+            TPADataset("Reidy et al. (2018)", avgcalctime, timeshift[0], dt.date(2015, 12, 1), dt.date(2016, 1, 1))
+            #TPADataset("Cumnock (2005)", avgcalctime, timeshift[0], datetime.date(1996, 3, 1), datetime.date(2000, 10, 1))
             ]
 
 # Extracting IMF during the period of the dataset and loading it into the datasets
 for i, dataset in enumerate(datasets):
     print("loading background (%i/%i)" % (i + 1, len(datasets)))
-    dataset.total(OMNI_dir, paras_in)
+    dataset.get_dataset_parameters(OMNI_data_dir, paras_in)
     #dataset.vars["BmagGSM"] = np.sqrt(dataset.get_total("BxGSM") ** 2 + dataset.get_total("ByGSM") ** 2 + dataset.get_total("ByGSM") ** 2)
     print("Background loaded")
 
+# TODO: cleaner code with less repetition
 # Loading TPAs into the datasets
 extract_data = DataExtract(tpa_dir)
 extract_data.fear_dataclean(datasets[0])
@@ -54,7 +54,7 @@ for yl in ylim:
         clean_tpas[dn] = np.empty(len(dataset.tpas), dtype=bool)
         dataset.timeshift = ts
         for tpa in dataset.tpas:
-            tpa.avg(OMNI_dir, paras_in)
+            tpa.get_parameters(OMNI_data_dir, paras_in)
             # Adjust for hemisphere
             if hemadjust and tpa.hem == "s":
                 tpa.dipole *= -1
@@ -131,7 +131,7 @@ for yl in ylim:
         sp.axvline(0, color="grey", lw=1, zorder=-1)
         sp.set_xlabel(xlabel)
         sp.set_ylabel("Probability Distribution")
-        bg = dataset.vars['vel'] * dataset.vars["BmagGSM"]**2
+        bg = dataset.total['vel'] * dataset.total["BmagGSM"] ** 2
         bg = bg[~np.isnan(bg)]
         fg = dataset.get('vel') * dataset.get("BmagGSM")**2
         #fg_m = fg[np.where(dataset.get("moving") == "yes", True, False)]
@@ -171,7 +171,7 @@ for yl in ylim:
     plt.tight_layout()
 
     if savefig:
-        plt.savefig(filename.format(variable, ts, ts+avgcalctime, "_hemadjust" if hemadjust else "", "_norm" if norm else "", yl))
+        plt.savefig(figure_filename.format(variable, ts, ts + avgcalctime, "_hemadjust" if hemadjust else "", "_norm" if norm else "", yl))
         plt.close()
     if plotfig:
         plt.show()

@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 #import numpy as np
 from data_struct import *
-from data_extract import DataExtract
-from scipy.stats import mstats as st
+from data_extraction.tpa_extract import DataExtract
+
 #from TPA import test_OMNI
 #import sys
 
@@ -32,7 +32,7 @@ datasets = [Dataset("Fear & Milan (2012)", avgcalctime, timeshift[0], datetime.d
 # Extracting IMF during the period of the dataset and loading it into the datasets
 for i, dataset in enumerate(datasets):
     print("loading background IMF (%i/%i)" % (i + 1, len(datasets)))
-    dataset.total(OMNI_dir, paras_in)
+    dataset.get_dataset_parameters(OMNI_dir, paras_in)
     print("Background IMF loaded")
 
 # Loading TPAs into the datasets
@@ -54,7 +54,7 @@ for ts in timeshift:
         clean_tpas[dn] = np.empty(len(dataset.tpas), dtype=bool)
         dataset.timeshift = ts
         for tpa in dataset.tpas:
-            tpa.avg(OMNI_dir, paras_in)
+            tpa.get_parameters(OMNI_dir, paras_in)
             # Adjust for hemisphere
             if hemadjust and tpa.hem == "s":
                 tpa.dipole *= -1
@@ -105,9 +105,9 @@ for ts in timeshift:
         sp.axvline(0, color="grey", zorder=1)
         sp.set_xlabel(labels[0])
         sp.set_ylabel(labels[1])
-        x = dataset.vars[paras_in[0]]
+        x = dataset.total[paras_in[0]]
         x = x[~np.isnan(x)]
-        y = dataset.vars[paras_in[1]]
+        y = dataset.total[paras_in[1]]
         y = y[~np.isnan(y)]
         counts, xedges, yedges, im = sp.hist2d(x, y, bins=300, cmap=cmap, density=True, zorder=0)
         cbar = plt.colorbar(im, ax=sp)

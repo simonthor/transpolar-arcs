@@ -206,7 +206,7 @@ if __name__ == "__main__":
                 start_time = tpa.date - datetime.timedelta(minutes=avgcalctime+timeshift)
                 end_time = tpa.date - datetime.timedelta(minutes=timeshift)
                 loadObj = test_OMNI.LoadOMNI(start_time, end_time, data_dir=OMNI_dir)
-                loadObj.laod_OMNI_data(paras_in=paras_in)
+                loadObj.load_OMNI_data(paras_in=paras_in)
                 BxGSM = [Bx for Bx in loadObj.paras['BxGSM'] if not np.isnan(Bx)]
                 if len(BxGSM) == 0:
                     tpa.Bx = np.nan

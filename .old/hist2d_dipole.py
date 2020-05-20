@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from data_struct import *
-from data_extract import DataExtract
-from scipy.stats import mstats as st
+from data_extraction.tpa_extract import DataExtract
+
 #import test_OMNI
 #import sys
 
@@ -30,7 +30,7 @@ datasets = [Dataset("Fear & Milan (2012)", avgcalctime, timeshift[0], datetime.d
 # Extracting IMF during the period of the dataset and loading it into the datasets
 for i, dataset in enumerate(datasets):
     print("loading background IMF (%i/%i)" % (i + 1, len(datasets)))
-    dataset.total(OMNI_dir, paras_in)
+    dataset.get_dataset_parameters(OMNI_dir, paras_in)
     print("Background IMF loaded")
 
 # Loading TPAs into the datasets
@@ -51,7 +51,7 @@ for ts in timeshift:
         clean_tpas[dn] = np.empty(len(dataset.tpas), dtype=bool)
         dataset.timeshift = ts
         for tpa in dataset.tpas:
-            tpa.avg(OMNI_dir, paras_in)
+            tpa.get_parameters(OMNI_dir, paras_in)
             # Adjust for hemisphere
             if hemadjust and tpa.hem == "s":
                 tpa.dipole *= -1
@@ -88,7 +88,7 @@ for ts in timeshift:
         sp.axvline(0, color="grey", zorder=1)
         sp.set_xlabel('Dipole tilt (degrees)')
         sp.set_ylabel('IMF $B_X$ (nT)')
-        x = dataset.vars[paras_in[0]]
+        x = dataset.total[paras_in[0]]
         x = x[~np.isnan(x)]
         color = np.empty(len(dataset.tpas), dtype=str)
         color[:] = "k"

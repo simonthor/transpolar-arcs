@@ -196,7 +196,6 @@ if __name__ == "__main__":
     cmap = "jet"
     IMF = {}
 
-
     print("filtering TPAs and creating lists")
     data = {"Fear": fear_dataclean(),
             "Kullen": kullen_dataclean(),
@@ -216,7 +215,7 @@ if __name__ == "__main__":
         print(start_mon, end_mon)
 
         loadObj = test_OMNI.LoadOMNI(start_mon, end_mon, data_dir=OMNI_dir)
-        loadObj.laod_OMNI_data(paras_in=paras_in)
+        loadObj.load_OMNI_data(paras_in=paras_in)
         totalBx = [Bx[0] for Bx in loadObj.paras['BxGSM'] if not np.isnan(Bx)]
         totalBy = [By[0] for By in loadObj.paras['ByGSM'] if not np.isnan(By)]
 
@@ -237,7 +236,7 @@ if __name__ == "__main__":
             start_time = tpa.date - datetime.timedelta(minutes=avgcalctime+timeshift)
             end_time = tpa.date - datetime.timedelta(minutes=timeshift)
             loadObj = test_OMNI.LoadOMNI(start_time, end_time, data_dir=OMNI_dir)
-            loadObj.laod_OMNI_data(paras_in=paras_in)
+            loadObj.load_OMNI_data(paras_in=paras_in)
             BxGSM = [Bx[0] for Bx in loadObj.paras['BxGSM'] if not np.isnan(Bx)]
             ByGSM = [By[0] for By in loadObj.paras['ByGSM'] if not np.isnan(By)]
             if len(BxGSM) == 0:
