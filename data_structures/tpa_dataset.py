@@ -25,7 +25,11 @@ class TPADataset:
         self.tpa_values = self.total.copy()
 
     def get_dataset_parameters(self, OMNI_dir: str, paras: Union[List[str], str]):
-        """Loads the value of parameters for the entire period of the dataset."""
+        """Loads the value of parameters for the entire period of the dataset.
+        Inputs:
+        OMNI_dir (str): directory where OMNI data is stored.
+        paras (List[str], str): parameters that will be extracted. A full list of available parameters can be seen in
+                                LoadOMNI.full_para_list. """
         if isinstance(paras, str):
             paras = [paras]
 
@@ -38,6 +42,11 @@ class TPADataset:
                 self.total[key] = val
 
     def append(self, tpa: TPA):
+        """Add a transpolar arc (TPA) to the dataset.
+         Takes the TPA's attributes and appends its values to self.tpa_values and self.tpa_properties.
+        Inputs:
+        tpa (data_structures.tpa_dataset.tpa.TPA): transpolar arc that will be added to the dataset.
+        """
         for value in self.total.keys():
             if hasattr(tpa, value):
                 self.tpa_values[value] = np.append(self.tpa_values[value], getattr(tpa, value))

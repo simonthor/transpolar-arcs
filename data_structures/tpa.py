@@ -51,7 +51,12 @@ class TPA:
             self.BxGSE *= -1
             self.dipole *= -1
 
-    def get_dipole_data(self, avgcalctime, timeshift):
+    def get_dipole_data(self, avgcalctime: int, timeshift: int):
+        """Retrieves information about the dipole tile of the Earth during the transpolar arc.
+        Inputs:
+        avgcalctime (int): calculate the average dipole tilt over these number of minutes.
+        timeshift (int): begin calculating the dipole tilt from [time of TPA] - [timeshift] and backwards.
+        """
         dipoles = []
         for i in range(avgcalctime):
             t = (self.date - dt.datetime(1970, 1, 1) - dt.timedelta(minutes=i + timeshift)).total_seconds()

@@ -8,6 +8,8 @@ from data_structures.tpa import TPA
 
 
 class DataExtract:
+    """Extracts transpolar arc (TPA) data from different datasets."""
+
     def __init__(self, tpa_dir):
         self.tpa_dir = tpa_dir
         self.name_to_function = {'Fear & Milan (2012)': self.fear_dataclean,
@@ -16,13 +18,16 @@ class DataExtract:
                                  'Reidy et al. (2018)': self.reidy_dataclean,
                                  'Cumnock et al. (2005)': self.cumnock1_dataclean}
 
-    def get_tpas(self, dataset_name, *args, **kwargs):
+    def get_tpas(self, dataset_name: str, *args, **kwargs):
+        """Small wrapper for calling all TPA extraction functions based on dataset_name.
+        Input: dataset_name (str): name of the authors of the paper where the dataset was presented.
+        All other parameters passed will be forwarded to the retriever function.
+        """
         retriever_function = self.name_to_function[dataset_name]
         return retriever_function(*args, **kwargs)
 
     def kullen_dataclean(self, filename="datafile_tpa_location.dat"):
-        """Extracting Kullen's data
-         Input file type: .dat
+        """Extracting Kullen's data.
          """
         filename = self.tpa_dir + filename
         with open(filename) as dat:
@@ -46,8 +51,7 @@ class DataExtract:
 
     def cumnock0_dataclean(self, filename="Single_Multiple_Arcs_IMF_dipole_list_2015_AK_prel_dadu.xls",
                            usecols="A, C, D, N", sheet_name="Sheet1"):
-        """Extracting Cumnock's first data (excel)"""
-
+        """Extracting Cumnock's first dataset."""
         filename = self.tpa_dir + filename
 
         judy = pd.read_excel(filename, sheet_name=sheet_name, index_col=None, usecols=usecols)
@@ -73,7 +77,7 @@ class DataExtract:
                 yield TPA(date, row[1], moving="yes", dadu=dadu)
 
     def cumnock1_dataclean(self, filename="listoftimes.xls", sheet_name="Sheet1", usecols="A, G, M"):
-        """Extracting Cumnock's second data (excel)"""
+        """Extracting Cumnock's second data."""
         filename = self.tpa_dir + filename
 
         judy = pd.read_excel(filename, sheet_name=sheet_name, index_col=None, usecols=usecols, skiprows=[1, 2])
@@ -99,7 +103,7 @@ class DataExtract:
 
     @staticmethod
     def fear_fileclean(filename="Fear_TPA_data_frompaper.txt"):
-        """Cleaning Fear's data to readable txt (txt)"""
+        """Cleaning Fear's data to readable txt"""
         clean = ""
         with open(filename, "r") as fear:
             for line in fear:
@@ -118,7 +122,7 @@ class DataExtract:
             fear.write(clean)
 
     def fear_dataclean(self, filename='fear_TPA_data_frompaper.txt'):
-        """Extracting Fear's data (txt)"""
+        """Extracting Fear's data"""
         filename = self.tpa_dir + filename
 
         if 'frompaper' in filename:
@@ -156,6 +160,7 @@ class DataExtract:
                                   tpa_parameters[3])
 
     def reidy_dataclean(self, filename='reidy_TPA_data.txt'):
+        """Extracts dataset by Reidy et al. (2018)."""
         filename = self.tpa_dir + filename
         with open(filename) as reidy:
             for line in reidy:
@@ -174,8 +179,9 @@ class DataExtract:
                                   hemisphere=parameters[9].lower(), conjugate=False)
 
     @staticmethod
-    def calc_motion(mlt1, mlt2):
-        d = abs(mlt2 - mlt1)
+    def calc_motion(mlt_start, mlt_end):
+        """Checks if TPA is moving or not."""
+        d = abs(mlt_end - mlt_start)
         if d > 12:
             d = 24 - d
         if d > 2:
@@ -187,6 +193,7 @@ class DataExtract:
 
     @staticmethod
     def calc_dadu(mlt):
+        """Checks if TPA is on dawn or dusk side."""
         if 0 < mlt <= 12:
             dadu = "dawn"
         else:
