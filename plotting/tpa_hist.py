@@ -29,7 +29,7 @@ def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True
 
     axis.legend()
     if log:
-        axis.set_xscale("log")
+        axis.set_xscale('log')
 
     axis.set_ylabel('Probability Distribution')
     axis.minorticks_on()
@@ -58,7 +58,7 @@ def hist2d_scatter(x, y, bg_x, bg_y, axis: Axes, dataset_name: str, normalize=Tr
         cbar = plt.colorbar(im, ax=axis)
         cbar.set_label('IMF probability distribution', rotation=270, labelpad=10)
 
-    axis.scatter(x, y, s=30, marker="P", edgecolors="w", linewidth=0.5, label=dataset_name, c=marker_color, zorder=2)
+    axis.scatter(x, y, s=30, marker='P', edgecolors='w', linewidth=0.5, label=dataset_name, c=marker_color, zorder=2)
     axis.set_facecolor(colormap(0))
     axis.legend(loc=1)
 
