@@ -1,4 +1,4 @@
-name: transpolar-arcs
+name: transpolar_arcs
 
 dependencies:
   - python=3.8
