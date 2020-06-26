@@ -4,7 +4,12 @@ from scipy import stats
 
 def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, dof: int = 0) -> float:
     """Calculate chi-square test p-value for sample and comparison.
-    Will bin samples with fewer values than smaller than 5"""
+    Will bin samples with fewer values than smaller than 5
+    TODO: Test if scipy.stats.kstest works too
+    """
+    if (total := comparison.sum()) < 5:
+        raise ValueError(f'Sum of comparison must be at least 5 but comparison only contained a total of {total}.')
+
     if (comparison >= 5).all():
         _, p_value = stats.chisquare(sample, comparison, dof)
         return p_value
