@@ -2,7 +2,7 @@ import numpy as np
 from scipy import stats
 
 
-def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, dof: int = 0) -> float:
+def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, *args, **kwargs) -> float:
     """Calculate chi-square test p-value for sample and comparison.
     Will bin samples with fewer values than smaller than 5
     TODO: Test if scipy.stats.kstest works too
@@ -11,7 +11,7 @@ def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, 
         raise ValueError(f'Sum of comparison must be at least 5 but comparison only contained a total of {total}.')
 
     if (comparison >= 5).all():
-        _, p_value = stats.chisquare(sample, comparison, dof)
+        _, p_value = stats.chisquare(sample, comparison, *args, **kwargs)
         return p_value
 
     merged_comparison, merged_sample, merged_bins = np.copy(comparison), np.copy(sample), np.copy(bins)
@@ -38,6 +38,6 @@ def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, 
     merged_sample = merged_sample[merged_sample != -1]
     merged_comparison = merged_comparison[merged_comparison != -1]
 
-    # TODO: use other dof value?
-    _, p_value = stats.chisquare(merged_sample, merged_comparison, dof)
+    print(merged_sample, merged_comparison)
+    _, p_value = stats.chisquare(merged_sample, merged_comparison, *args, **kwargs)
     return p_value
