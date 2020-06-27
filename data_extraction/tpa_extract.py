@@ -24,7 +24,7 @@ class DataExtract:
         All other parameters passed will be forwarded to the retriever function.
         """
         retriever_function = self.name_to_function[dataset_name]
-        yield retriever_function(*args, **kwargs)
+        return retriever_function(*args, **kwargs)
 
     def kullen_dataclean(self, filename="datafile_tpa_location.dat"):
         """Extracting Kullen's data.
