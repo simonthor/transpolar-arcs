@@ -34,6 +34,8 @@ def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True
     axis.set_ylabel('Probability Distribution')
     axis.minorticks_on()
 
+    return fg_hist_values, bg_hist_values, bins
+
 
 def hist2d_scatter(x, y, bg_x, bg_y, axis: Axes, dataset_name: str, normalize=True, marker_color: str = 'k', bins=300,
                    colormap_name: str = 'jet', color_bar=False):
