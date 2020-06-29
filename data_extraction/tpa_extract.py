@@ -1,11 +1,13 @@
 # Standard library
 import warnings
 import datetime as dt
+import re
 # Packages
 import pandas as pd
 # Self-written modules
 from data_structures.tpa import TPA
 
+# TODO: create factory class?
 
 class DataExtract:
     """Extracts transpolar arc (TPA) data from different datasets."""
@@ -16,7 +18,8 @@ class DataExtract:
                                  'Kullen et al. (2002)': self.kullen_dataclean,
                                  'Cumnock et al. (2009)': self.cumnock0_dataclean,
                                  'Reidy et al. (2018)': self.reidy_dataclean,
-                                 'Cumnock et al. (2005)': self.cumnock1_dataclean}
+                                 'Cumnock et al. (2005)': self.cumnock1_dataclean,
+                                 'new': self.simon_dataclean}
 
     def get_tpas(self, dataset_name: str, *args, **kwargs):
         """Small wrapper for calling all TPA extraction functions based on dataset_name.
@@ -177,6 +180,28 @@ class DataExtract:
                         yield TPA(dt.datetime.strptime(parameters[1] + parameters[2] + parameters[3] + parameters[4],
                                                        '%d%b%Y%H:%M'),
                                   hemisphere=parameters[9].lower(), conjugate=False)
+
+    def simon_dataclean(self, filename: str, *args, **kwargs):
+        datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
+
+        # Merge northern and southern hemisphere into one column
+        northern = datafile.iloc[:, :datafile.columns.get_loc('Date.1')]
+        southern = datafile.iloc[:, datafile.columns.get_loc('Date.1'):]
+        southern.columns = [name.replace('.1', '') for name in southern.columns]
+
+        def listify(row, index):
+            # TODO: inefficient. Should use pd.Series.notna() and turn Series into list
+            return [tpa_loc for tpa_loc in row[index] if pd.notnull(tpa_loc)]
+
+        # TODO: use pd builtin function to extract column names which match regex? E.g. row.index.str.extractall('X[0-9]*')] (not working)
+        southern.apply(listify, axis=1, index=[colname for colname in southern.columns if re.fullmatch('X[0-9]', colname[:2])])
+        # Create separate dataframe for each TPA event
+        tpa_dfs = []
+        tpa_separator_index = datafile.index[datafile.isnull().all(1)]
+        for i, j in zip(tpa_separator_index[:-1], tpa_separator_index[1:]):
+            tpa_dfs.append(datafile.iloc[i+1:j, :])
+
+
 
     @staticmethod
     def calc_motion(mlt_start, mlt_end):
