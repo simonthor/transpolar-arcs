@@ -185,21 +185,32 @@ class DataExtract:
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
 
         # Merge northern and southern hemisphere into one column
-        northern = datafile.iloc[:, :datafile.columns.get_loc('Date.1')]
-        southern = datafile.iloc[:, datafile.columns.get_loc('Date.1'):]
-        southern.columns = [name.replace('.1', '') for name in southern.columns]
+        def merge_sn(row):
+            northern = row.iloc[:datafile.columns.get_loc('Date.1')]
+            southern = row.iloc[datafile.columns.get_loc('Date.1'):]
+            southern.columns = [name.replace('.1', '') for name in southern.columns]
+            x_index = [colname for colname in southern.index if re.fullmatch('X[0-9]', colname[:2])]
+            notes = pd.concat([northern['Note'], southern['Note']])
+            notes.index = ['Note N', 'Note S']
+            return pd.concat([southern.iloc[:-1] if southern[x_index].any() else northern[:-1], notes])
 
-        def listify(row, index):
-            # TODO: inefficient. Should use pd.Series.notna() and turn Series into list
-            return [tpa_loc for tpa_loc in row[index] if pd.notnull(tpa_loc)]
+        merged_sn_df = datafile.apply(merge_sn, axis=1)
+        # northern = datafile.iloc[:, :datafile.columns.get_loc('Date.1')]
+        # southern = datafile.iloc[:, datafile.columns.get_loc('Date.1'):]
+        # southern.columns = [name.replace('.1', '') for name in southern.columns]
+        # pd.concat([northern, southern], axis=1, join='inner')
 
-        # TODO: use pd builtin function to extract column names which match regex? E.g. row.index.str.extractall('X[0-9]*')] (not working)
-        southern.apply(listify, axis=1, index=[colname for colname in southern.columns if re.fullmatch('X[0-9]', colname[:2])])
+        def listify(row, x_index):
+            # TODO: Probably inefficient. Use pd.Series.notna() and turn Series into list?
+            return [tpa_loc for tpa_loc in row[x_index] if pd.notnull(tpa_loc)]
+
+        # TODO: pd builtin function to extract column names which match regex? E.g. row.index.str.extractall('X[0-9]*')] (not working)
+        all_tpa_df = merged_sn_df.apply(listify, axis=1, x_index=[colname for colname in merged_sn_df.columns if re.fullmatch('X[0-9]', colname[:2])])
         # Create separate dataframe for each TPA event
         tpa_dfs = []
-        tpa_separator_index = datafile.index[datafile.isnull().all(1)]
+        tpa_separator_index = merged_sn_df.index[datafile.isnull().all(1)]
         for i, j in zip(tpa_separator_index[:-1], tpa_separator_index[1:]):
-            tpa_dfs.append(datafile.iloc[i+1:j, :])
+            tpa_dfs.append(merged_sn_df.iloc[i+1:j, :])
 
 
 
