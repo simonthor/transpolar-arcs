@@ -4,11 +4,12 @@ import datetime as dt
 import re
 # Packages
 import pandas as pd
+import numpy as np
 # Self-written modules
 from data_structures.tpa import TPA
 
-# TODO: create factory class?
 
+# TODO: create factory class?
 class DataExtract:
     """Extracts transpolar arc (TPA) data from different datasets."""
 
@@ -183,14 +184,15 @@ class DataExtract:
 
     def simon_dataclean(self, filename: str, *args, **kwargs):
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
+        datafile.replace(' ', np.nan, inplace=True)
 
         # Merge northern and southern hemisphere into one column
         def merge_sn(row):
-            northern = row.iloc[:datafile.columns.get_loc('Date.1')]
-            southern = row.iloc[datafile.columns.get_loc('Date.1'):]
-            southern.columns = [name.replace('.1', '') for name in southern.columns]
+            northern = row.iloc[:row.index.get_loc('Date.1')]
+            southern = row.iloc[row.index.get_loc('Date.1'):]
+            southern.index = [name.replace('.1', '') for name in southern.index]
             x_index = [colname for colname in southern.index if re.fullmatch('X[0-9]', colname[:2])]
-            notes = pd.concat([northern['Note'], southern['Note']])
+            notes = pd.concat([northern[['Note']], southern[['Note']]])
             notes.index = ['Note N', 'Note S']
             return pd.concat([southern.iloc[:-1] if southern[x_index].any() else northern[:-1], notes])
 
@@ -202,17 +204,23 @@ class DataExtract:
 
         def listify(row, x_index):
             # TODO: Probably inefficient. Use pd.Series.notna() and turn Series into list?
-            return [tpa_loc for tpa_loc in row[x_index] if pd.notnull(tpa_loc)]
+            tpa_list = [tpa_loc for tpa_loc in row[x_index] if pd.notnull(tpa_loc)]
+            if tpa_list:
+                return tpa_list
+            else:
+                return np.nan
 
         # TODO: pd builtin function to extract column names which match regex? E.g. row.index.str.extractall('X[0-9]*')] (not working)
-        all_tpa_df = merged_sn_df.apply(listify, axis=1, x_index=[colname for colname in merged_sn_df.columns if re.fullmatch('X[0-9]', colname[:2])])
+        all_tpa_df = merged_sn_df.copy()
+        all_tpa_df['X'] = merged_sn_df.apply(listify, axis=1, x_index=[colname for colname in merged_sn_df.columns if re.fullmatch('X[0-9]', colname[:2])])
+        all_tpa_df.drop([colname for colname in merged_sn_df.columns if re.fullmatch('X[0-9]', colname[:2])], axis=1, inplace=True)
         # Create separate dataframe for each TPA event
         tpa_dfs = []
-        tpa_separator_index = merged_sn_df.index[datafile.isnull().all(1)]
+        tpa_separator_index = all_tpa_df.index[all_tpa_df.isnull().all(1)]
         for i, j in zip(tpa_separator_index[:-1], tpa_separator_index[1:]):
-            tpa_dfs.append(merged_sn_df.iloc[i+1:j, :])
+            tpa_dfs.append(all_tpa_df.iloc[i+1:j, :])
 
-
+        return tpa_dfs
 
     @staticmethod
     def calc_motion(mlt_start, mlt_end):
@@ -240,3 +248,7 @@ class DataExtract:
 
         return dadu
 
+
+if __name__ == '__main__':
+    extractor = DataExtract(r'F:/Simon TPA research/2019 Lei DMSP TPA list/DMSP_arcs/')
+    tpa_dfs = extractor.simon_dataclean('Simon identified arcs_200701.xlsx')
