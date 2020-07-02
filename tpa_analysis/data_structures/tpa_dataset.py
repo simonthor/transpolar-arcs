@@ -17,6 +17,7 @@ class TPADataset:
     time_shift: float
     start_time: dt.datetime
     end_time: dt.datetime
+    # TODO: change type of total, tpa_values, tpa_properties to pd.DataFrame instead?
     total: dict = field(default_factory=lambda: dict((paraname, []) for paraname in [*LoadOMNI.full_para_list, 'dipole']))
     tpa_values: dict = field(init=False)
     tpa_properties: dict = field(init=False, default_factory=lambda: {})
@@ -35,7 +36,7 @@ class TPADataset:
 
         if 'dipole' in parameters:
             # TODO: add support for dipole of dataset
-            # self.get_dipole_data(self.avgcalctime, self.timeshift)
+            # self.get_dipole_data(self.avgcalctime)
             # self.total['dipole'] = self.dipole
             parameters.remove('dipole')
 

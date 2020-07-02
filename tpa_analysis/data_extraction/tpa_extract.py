@@ -197,7 +197,7 @@ class DataExtract:
             x_index = [colname for colname in southern.index if re.fullmatch('X[0-9]', colname[:2])]
             notes = pd.concat([northern[['Notes']], southern[['Notes']], row[['Conjugacy/FOV']]])
             notes.index = ['Note N', 'Note S', 'Conjugacy/FOV']
-            return pd.concat([southern.iloc[:-1] if southern[x_index].any() else northern[:-1], notes])
+            return pd.concat([southern.iloc[:-1] if pd.notnull(southern['Time']) else northern[:-1], notes])
 
         # TODO: Slow
         merged_sn_df = datafile.apply(merge_sn, axis=1)
