@@ -31,7 +31,7 @@ class TPA:
             parameters = [parameters]
 
         if 'dipole' in parameters:
-            self.get_dipole_data(avgcalctime, timeshift)
+            self.get_dipole_data(avgcalctime)
             retrieved_parameters['dipole'] = self.dipole
             parameters.remove('dipole')
 
@@ -48,20 +48,25 @@ class TPA:
                 else:
                     setattr(self, key, np.nan)
 
-        # Adjusting for hemisphere
-        if hasattr(self, 'BxGSE') and self.hemisphere == 's':
-            self.BxGSE *= -1
-            self.dipole *= -1
+        # # Adjusting for hemisphere
+        # if hasattr(self, 'BxGSE') and self.hemisphere == 's':
+        #     self.BxGSE *= -1
+        #     self.dipole *= -1
 
-    def get_dipole_data(self, avgcalctime: int, timeshift: int):
+    def get_dipole_data(self, avgcalctime: int):
         """Retrieves information about the dipole tile of the Earth during the transpolar arc.
         Inputs:
         avgcalctime (int): calculate the average dipole tilt over these number of minutes.
-        timeshift (int): begin calculating the dipole tilt from [time of TPA] - [timeshift] and backwards.
         """
-        dipoles = []
-        for i in range(avgcalctime):
-            t = (self.date - dt.datetime(1970, 1, 1) - dt.timedelta(minutes=i + timeshift)).total_seconds()
-            dipoles.append(180 / np.pi * geopack.recalc(t))
+        def get_dipole_tilt(minute):
+            t = (self.date - dt.datetime(1970, 1, 1) - dt.timedelta(minutes=int(minute))).total_seconds()
+            return 180 / np.pi * geopack.recalc(t)
 
+        # inclusive or exclusive avgcalctime? E.g. 0-19 or 0-20 or 1-20?
+        dipoles = np.vectorize(get_dipole_tilt)(np.arange(0, avgcalctime, dtype=int))
         self.dipole = np.nanmean(dipoles)
+        # for i in range(avgcalctime):
+        #     t = (self.date - dt.datetime(1970, 1, 1) - dt.timedelta(minutes=i)).total_seconds()
+        #     dipoles.append(180 / np.pi * geopack.recalc(t))
+        #
+        # self.dipole = np.nanmean(dipoles)
