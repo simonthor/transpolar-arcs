@@ -64,3 +64,27 @@ def hist2d_scatter(x, y, bg_x, bg_y, axis: Axes, dataset_name: str, normalize=Tr
     axis.set_facecolor(colormap(0))
     axis.legend(loc=1)
 
+
+def scatter(x, y, axis: Axes, dataset_name: str, marker_color: str = 'k', *args, **kwargs):
+    axis.axhline(0, color='grey', zorder=1)
+    axis.axvline(0, color='grey', zorder=1)
+    omit_index = np.isnan(x) | np.isnan(y)
+    x = x[~omit_index]
+    y = y[~omit_index]
+    axis.scatter(x, y, s=30, marker='P', edgecolors='w', linewidth=0.5, label=dataset_name, c=marker_color, zorder=2,
+                 *args, **kwargs)
+    axis.legend(loc=1)
+
+# TODO: create template figure for scatter plots? E.g:
+from contextlib import contextmanager
+@contextmanager
+def scatter_template(xlim=None, ylim=None, save=False):
+    fig, ax = plt.subplots()
+    ax.axhline(0, color='grey', zorder=-1)
+    ax.axvline(0, color='grey', zorder=-1)
+    yield fig, ax
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    if save:
+        fig.savefig(save)
+    fig.show()
