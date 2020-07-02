@@ -188,14 +188,15 @@ class DataExtract:
 
         # Merge northern and southern hemisphere into one column
         def merge_sn(row):
-            northern = row.iloc[:row.index.get_loc('Date.1')]
+            northern = row.iloc[:row.index.get_loc('Conjugacy/FOV')]
             southern = row.iloc[row.index.get_loc('Date.1'):]
             southern.index = [name.replace('.1', '') for name in southern.index]
             x_index = [colname for colname in southern.index if re.fullmatch('X[0-9]', colname[:2])]
-            notes = pd.concat([northern[['Note']], southern[['Note']]])
-            notes.index = ['Note N', 'Note S']
+            notes = pd.concat([northern[['Notes']], southern[['Notes']], row[['Conjugacy/FOV']]])
+            notes.index = ['Note N', 'Note S', 'Conjugacy/FOV']
             return pd.concat([southern.iloc[:-1] if southern[x_index].any() else northern[:-1], notes])
 
+        # TODO: Slow
         merged_sn_df = datafile.apply(merge_sn, axis=1)
         # northern = datafile.iloc[:, :datafile.columns.get_loc('Date.1')]
         # southern = datafile.iloc[:, datafile.columns.get_loc('Date.1'):]
@@ -210,9 +211,9 @@ class DataExtract:
             else:
                 return np.nan
 
-        # TODO: pd builtin function to extract column names which match regex? E.g. row.index.str.extractall('X[0-9]*')] (not working)
         all_tpa_df = merged_sn_df.copy()
-        all_tpa_df['X'] = merged_sn_df.apply(listify, axis=1, x_index=[colname for colname in merged_sn_df.columns if re.fullmatch('X[0-9]', colname[:2])])
+        all_tpa_df.insert(loc=all_tpa_df.columns.get_loc('Hemi-sphere')+1, column='X',
+                          value=merged_sn_df.apply(listify, axis=1, x_index=[colname for colname in merged_sn_df.columns if re.fullmatch('X[0-9]', colname[:2])]))
         all_tpa_df.drop([colname for colname in merged_sn_df.columns if re.fullmatch('X[0-9]', colname[:2])], axis=1, inplace=True)
         # Create separate dataframe for each TPA event
         tpa_dfs = []
@@ -221,6 +222,7 @@ class DataExtract:
             tpa_dfs.append(all_tpa_df.iloc[i+1:j, :])
 
         return tpa_dfs
+
 
     @staticmethod
     def calc_motion(mlt_start, mlt_end):
