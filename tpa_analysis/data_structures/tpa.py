@@ -24,6 +24,8 @@ class TPA:
         """Calculates TPA parameters (e.g. 'BxGSM' and adds them to the TPA object
         returns: calculated parameters
         """
+        parameters = parameters.copy()
+
         retrieved_parameters = {}
         if isinstance(parameters, str):
             parameters = [parameters]
