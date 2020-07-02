@@ -6,7 +6,7 @@ import re
 import pandas as pd
 import numpy as np
 # Self-written modules
-from data_structures.tpa import TPA
+from tpa_analysis.data_structures.tpa import TPA
 
 
 # TODO: create factory class?
@@ -216,13 +216,18 @@ class DataExtract:
                           value=merged_sn_df.apply(listify, axis=1, x_index=[colname for colname in merged_sn_df.columns if re.fullmatch('X[0-9]', colname[:2])]))
         all_tpa_df.drop([colname for colname in merged_sn_df.columns if re.fullmatch('X[0-9]', colname[:2])], axis=1, inplace=True)
         # Create separate dataframe for each TPA event
-        tpa_dfs = []
         tpa_separator_index = all_tpa_df.index[all_tpa_df.isnull().all(1)]
+        tpa_dfs = [all_tpa_df.iloc[:tpa_separator_index[0], :]]
         for i, j in zip(tpa_separator_index[:-1], tpa_separator_index[1:]):
             tpa_dfs.append(all_tpa_df.iloc[i+1:j, :])
 
-        return tpa_dfs
-
+        for tpa in tpa_dfs:
+            tpa = tpa.sort_values(by=['Date', 'Time'])
+            for hemisphere in 'NS':
+                hemisphere_tpas = tpa[tpa['Hemi-sphere'] == hemisphere]
+                if not hemisphere_tpas.empty:
+                    first_detection = hemisphere_tpas.iloc[0, :]
+                    yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']), hemisphere=hemisphere)
 
     @staticmethod
     def calc_motion(mlt_start, mlt_end):
@@ -253,4 +258,5 @@ class DataExtract:
 
 if __name__ == '__main__':
     extractor = DataExtract(r'F:/Simon TPA research/2019 Lei DMSP TPA list/DMSP_arcs/')
-    tpa_dfs = extractor.simon_dataclean('Simon identified arcs_200701.xlsx')
+    for tpa in extractor.simon_dataclean('Simon identified arcs_200702.xlsx'):
+        print(tpa)

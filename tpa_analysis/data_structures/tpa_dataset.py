@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 # Packages
 import numpy as np
 # Self-written modules
-from data_extraction.test_OMNI import LoadOMNI
-from data_structures.tpa import TPA
+from ..data_extraction.test_OMNI import LoadOMNI
+from ..data_structures.tpa import TPA
 
 
 @dataclass

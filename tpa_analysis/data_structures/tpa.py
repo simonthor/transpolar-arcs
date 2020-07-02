@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import List
 from geopack import geopack
 import numpy as np
-from data_extraction import test_OMNI
+from ..data_extraction import test_OMNI
 
 
 @dataclass
