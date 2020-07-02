@@ -6,7 +6,7 @@ import re
 import pandas as pd
 import numpy as np
 # Self-written modules
-from tpa_analysis.data_structures.tpa import TPA
+from ..data_structures.tpa import TPA
 
 
 # TODO: create factory class?
@@ -20,14 +20,17 @@ class DataExtract:
                                  'Cumnock et al. (2009)': self.cumnock0_dataclean,
                                  'Reidy et al. (2018)': self.reidy_dataclean,
                                  'Cumnock et al. (2005)': self.cumnock1_dataclean,
-                                 'new': self.simon_dataclean}
+                                 'New dataset': self.simon_dataclean}
 
     def get_tpas(self, dataset_name: str, *args, **kwargs):
         """Small wrapper for calling all TPA extraction functions based on dataset_name.
         Input: dataset_name (str): name of the authors of the paper where the dataset was presented.
         All other parameters passed will be forwarded to the retriever function.
         """
-        retriever_function = self.name_to_function[dataset_name]
+        try:
+            retriever_function = self.name_to_function[dataset_name]
+        except KeyError:
+            raise KeyError(f'No TPA data extracting function for dataset with name {dataset_name}')
         return retriever_function(*args, **kwargs)
 
     def kullen_dataclean(self, filename="datafile_tpa_location.dat"):
@@ -225,7 +228,8 @@ class DataExtract:
             tpa = tpa.sort_values(by=['Date', 'Time'])
             for hemisphere in 'NS':
                 hemisphere_tpas = tpa[tpa['Hemi-sphere'] == hemisphere]
-                if not hemisphere_tpas.empty:
+                # TODO: add more restrictions to which TPAs should be returned and which not
+                if not (hemisphere_tpas.empty or hemisphere_tpas['Time'].isnull().all()):
                     first_detection = hemisphere_tpas.iloc[0, :]
                     yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']), hemisphere=hemisphere)
 

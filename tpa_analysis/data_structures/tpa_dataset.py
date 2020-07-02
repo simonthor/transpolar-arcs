@@ -17,27 +17,33 @@ class TPADataset:
     time_shift: float
     start_time: dt.datetime
     end_time: dt.datetime
-    total: dict = field(default_factory=lambda: dict((paraname, []) for paraname in LoadOMNI.full_para_list))
+    total: dict = field(default_factory=lambda: dict((paraname, []) for paraname in [*LoadOMNI.full_para_list, 'dipole']))
     tpa_values: dict = field(init=False)
     tpa_properties: dict = field(init=False, default_factory=lambda: {})
 
     def __post_init__(self):
         self.tpa_values = self.total.copy()
 
-    def get_dataset_parameters(self, OMNI_dir: str, paras: Union[List[str], str]):
+    def get_dataset_parameters(self, OMNI_dir: str, parameters: Union[List[str], str]):
         """Loads the value of parameters for the entire period of the dataset.
         Inputs:
         OMNI_dir (str): directory where OMNI data is stored.
         paras (List[str], str): parameters that will be extracted. A full list of available parameters can be seen in
                                 LoadOMNI.full_para_list. """
-        if isinstance(paras, str):
-            paras = [paras]
+        if isinstance(parameters, str):
+            parameters = [parameters]
+
+        if 'dipole' in parameters:
+            # TODO: add support for dipole of dataset
+            # self.get_dipole_data(self.avgcalctime, self.timeshift)
+            # self.total['dipole'] = self.dipole
+            parameters.remove('dipole')
 
         OMNI_data_loader = LoadOMNI(self.start_time, self.end_time, data_dir=OMNI_dir)
-        OMNI_data_loader.load_OMNI_data(paras_in=paras)
+        OMNI_data_loader.load_OMNI_data(paras_in=parameters)
 
         for key, val in OMNI_data_loader.paras.items():
-            if key in paras:
+            if key in parameters:
                 val = val.flatten()
                 self.total[key] = val
 
