@@ -4,7 +4,8 @@ from matplotlib import cm
 import numpy as np
 
 
-def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True, nbins=40, norm_ymax=10, log=False):
+def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True,
+           nbins: np.ndarray = np.linspace(-20, 20, 40), norm_ymax=10, log=False):
     """Plots 1D histogram of e.g. BxGSM.
     foreground (array_like): data for the TPAs.
     background (array_like): all the data for the IMF during the period of the dataset.
@@ -13,16 +14,16 @@ def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True
     background = background[~np.isnan(background)]
 
     axis.axvline(0, color="grey", lw=1, zorder=-1)
+    bg_hist_values, _, _ = axis.hist(background, bins=nbins, weights=np.ones_like(background) / len(background),
+                                     label='total IMF', histtype='step', zorder=0)
     fg_hist_values, bins, _ = axis.hist(foreground, bins=nbins, weights=np.ones_like(foreground) / len(foreground),
                                         label=dataset_name, histtype='step', zorder=1)
-    bg_hist_values, _, _ = axis.hist(background, bins=bins, weights=np.ones_like(background) / len(background),
-                                        label='total IMF', histtype='step', zorder=0)
     if normalize:
         normalized_axis = axis.twinx()  # instantiate a second axes that shares the same x-axis
         normalized_axis.axhline(1, ls="--", color='lightgrey', lw=1)
         masked_bg_hist_values = np.ma.masked_where(bg_hist_values == 0, bg_hist_values)
-        normalized_axis.step((bins[1:]+bins[:-1]) / 2, fg_hist_values / masked_bg_hist_values,
-                             where='mid', c='g', label='IMF normalized', zorder=2)
+        normalized_axis.plot((bins[1:]+bins[:-1]) / 2, fg_hist_values / masked_bg_hist_values,
+                             c='g', label='IMF normalized', zorder=2)
         normalized_axis.set_ylim(0, norm_ymax)
         label = normalized_axis.set_ylabel('IMF normalized TPA distribution', color='g')
         label.set_color('g')
@@ -66,8 +67,8 @@ def hist2d_scatter(x, y, bg_x, bg_y, axis: Axes, dataset_name: str, normalize=Tr
 
 
 def scatter(x, y, axis: Axes, dataset_name: str, marker_color: str = 'k', *args, **kwargs):
-    axis.axhline(0, color='grey', zorder=1)
-    axis.axvline(0, color='grey', zorder=1)
+    axis.axhline(0, color='grey', zorder=-1)
+    axis.axvline(0, color='grey', zorder=-1)
     omit_index = np.isnan(x) | np.isnan(y)
     x = x[~omit_index]
     y = y[~omit_index]
@@ -78,8 +79,8 @@ def scatter(x, y, axis: Axes, dataset_name: str, marker_color: str = 'k', *args,
 # TODO: create template figure for scatter plots? E.g:
 from contextlib import contextmanager
 @contextmanager
-def scatter_template(xlim=None, ylim=None, save=False):
-    fig, ax = plt.subplots()
+def scatter_template(xlim=None, ylim=None, save=False, *args, **kwargs):
+    fig, ax = plt.subplots(*args, **kwargs)
     ax.axhline(0, color='grey', zorder=-1)
     ax.axvline(0, color='grey', zorder=-1)
     yield fig, ax
@@ -88,3 +89,4 @@ def scatter_template(xlim=None, ylim=None, save=False):
     if save:
         fig.savefig(save)
     fig.show()
+    fig.close()
