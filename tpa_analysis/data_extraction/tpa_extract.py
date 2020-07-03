@@ -225,6 +225,10 @@ class DataExtract:
             tpa_dfs.append(all_tpa_df.iloc[i+1:j, :])
 
         for tpa in tpa_dfs:
+            if (tpa['Conjugacy/FOV'].str.contains('no image', na=False)).all():
+                print(tpa['Conjugacy/FOV'])
+                continue
+
             tpa = tpa.sort_values(by=['Date', 'Time'])
             for hemisphere in 'NS':
                 hemisphere_tpas = tpa[tpa['Hemi-sphere'] == hemisphere]
@@ -259,8 +263,3 @@ class DataExtract:
 
         return dadu
 
-
-if __name__ == '__main__':
-    extractor = DataExtract(r'F:/Simon TPA research/2019 Lei DMSP TPA list/DMSP_arcs/')
-    for tpa in extractor.simon_dataclean('Simon identified arcs_200702.xlsx'):
-        print(tpa)
