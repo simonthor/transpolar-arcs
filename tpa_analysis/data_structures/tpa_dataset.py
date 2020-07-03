@@ -34,6 +34,8 @@ class TPADataset:
         if isinstance(parameters, str):
             parameters = [parameters]
 
+        parameters = parameters.copy()
+
         if 'dipole' in parameters:
             # TODO: add support for dipole of dataset
             # self.get_dipole_data(self.avgcalctime)
