@@ -1,1 +1,2 @@
-from .tpa_hist import *
+from .hist import *
+from .scatter import *
