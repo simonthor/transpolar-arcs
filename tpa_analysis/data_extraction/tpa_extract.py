@@ -189,8 +189,8 @@ class DataExtract:
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
 
-        # Merge northern and southern hemisphere into one column
         def merge_sn(row):
+            """Merge northern and southern hemisphere into one column"""
             northern = row.iloc[:row.index.get_loc('Conjugacy/FOV')]
             southern = row.iloc[row.index.get_loc('Date.1'):]
             southern.index = [name.replace('.1', '') for name in southern.index]
@@ -207,7 +207,9 @@ class DataExtract:
         # pd.concat([northern, southern], axis=1, join='inner')
 
         def listify(row, x_index):
-            # TODO: Probably inefficient. Use pd.Series.notna() and turn Series into list?
+            """merge all X position columns (X1-X6) into one list
+            TODO: Probably inefficient. Use pd.Series.notna() and turn Series into list?
+            """
             tpa_list = [tpa_loc for tpa_loc in row[x_index] if pd.notnull(tpa_loc)]
             if tpa_list:
                 return tpa_list
@@ -226,10 +228,14 @@ class DataExtract:
 
         for tpa in tpa_dfs:
             if (tpa['Conjugacy/FOV'].str.contains('no image', na=False)).all():
-                print(tpa['Conjugacy/FOV'])
                 continue
 
             tpa = tpa.sort_values(by=['Date', 'Time'])
+            if (multiple_arc_idx := tpa['Conjugacy/FOV'].str.contains('multiple arcs', na=False)).any():
+                for i, first_detection_m in tpa[multiple_arc_idx].iterrows():
+                    yield TPA(dt.datetime.combine(first_detection_m['Date'].date(), first_detection_m['Time']),
+                              hemisphere=first_detection_m['Hemi-sphere'], conjugate='multiple')
+
             for hemisphere in 'NS':
                 hemisphere_tpas = tpa[tpa['Hemi-sphere'] == hemisphere]
                 # TODO: add more restrictions to which TPAs should be returned and which not

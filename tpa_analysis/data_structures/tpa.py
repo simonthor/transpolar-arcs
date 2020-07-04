@@ -18,7 +18,7 @@ class TPA:
     properties: dict = field(init=False)
 
     def __post_init__(self):
-        self.properties = {'hemisphere': self.hemisphere, 'dadu': self.dadu, 'moving': self.moving, 'conjugate': self.conjugate}
+        self.properties = {'date': self.date, 'hemisphere': self.hemisphere, 'dadu': self.dadu, 'moving': self.moving, 'conjugate': self.conjugate}
 
     def get_parameters(self, OMNI_dir: str, parameters: List[str], timeshift: int, avgcalctime: int):
         """Calculates TPA parameters (e.g. 'BxGSM' and adds them to the TPA object
@@ -63,7 +63,7 @@ class TPA:
             return 180 / np.pi * geopack.recalc(t)
 
         # TODO: inclusive or exclusive avgcalctime? E.g. 0-19 or 0-20 or 1-20?
-        dipoles = np.vectorize(get_dipole_tilt)(np.arange(0, avgcalctime, dtype=int))
+        dipoles = np.vectorize(get_dipole_tilt)(np.arange(1, avgcalctime+1, dtype=int))
         self.dipole = np.nanmean(dipoles)
         # dipoles = []
         # for i in range(avgcalctime):
