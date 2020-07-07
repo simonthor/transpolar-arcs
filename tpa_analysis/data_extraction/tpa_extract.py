@@ -81,7 +81,7 @@ class DataExtract:
                     dadu = row[3]
                 else:
                     dadu = None
-                yield TPA(date, row[1], moving="yes", dadu=dadu)
+                yield TPA(date, hemisphere=row[1], moving="yes", dadu=dadu)
 
     def cumnock1_dataclean(self, filename="listoftimes.xls", sheet_name="Sheet1", usecols="A, G, M"):
         """Extracting Cumnock's second data."""
@@ -94,14 +94,14 @@ class DataExtract:
                 break
             elif isinstance(row[0], int) or "00" in str(row[0]):
                 if len(str(row[0])) >= 5:
-                    yield TPA(dt.datetime.strptime(str(row[0]) + str(row[1]), "%y%j%X"), "n", moving="yes", dadu=row[2])
+                    yield TPA(dt.datetime.strptime(str(row[0]) + str(row[1]), "%y%j%X"), hemisphere="n", moving="yes", dadu=row[2])
                 else:
                     date = "0" * (5 - len(str(row[0]))) + str(row[0]) + str(row[1])
                     if len(usecols.split()) > 2:
                         dadu = row[2]
                     else:
                         dadu = None
-                    yield TPA(dt.datetime.strptime(date, "%y%j%X"), "n", moving="yes", dadu=dadu)
+                    yield TPA(dt.datetime.strptime(date, "%y%j%X"), hemisphere="n", moving="yes", dadu=dadu)
 
     def cai_dataclean(self, filename=""):
         """Function that will later be used for extracting Cai's dataset of TPAs from DMSP.
@@ -236,7 +236,7 @@ class DataExtract:
                     yield TPA(dt.datetime.combine(first_detection_m['Date'].date(), first_detection_m['Time']),
                               hemisphere=first_detection_m['Hemi-sphere'], conjugate='multiple')
 
-            for hemisphere in 'NS':
+            for hemisphere in 'ns':
                 hemisphere_tpas = tpa[tpa['Hemi-sphere'] == hemisphere]
                 # TODO: add more restrictions to which TPAs should be returned and which not
                 if not (hemisphere_tpas.empty or hemisphere_tpas['Time'].isnull().all()):
