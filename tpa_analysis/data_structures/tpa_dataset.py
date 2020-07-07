@@ -39,7 +39,7 @@ class TPADataset:
         parameters = parameters.copy()
 
         if 'dipole' in parameters:
-            dataset_date_range = pd.date_range(self.start_time, self.end_time, freq='min')
+            dataset_date_range = pd.date_range(self.start_time, self.end_time, freq='H')
             dipoles = np.empty(dataset_date_range.shape, dtype=float)
             for i, time in enumerate(dataset_date_range):
                 unix_time = (time - dt.datetime(1970, 1, 1)).total_seconds()
