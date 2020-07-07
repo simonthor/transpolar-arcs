@@ -1,8 +1,10 @@
 import datetime as dt
 from dataclasses import dataclass, field
 from typing import List
+
 from geopack import geopack
 import numpy as np
+
 from ..data_extraction import test_OMNI
 
 
@@ -62,7 +64,6 @@ class TPA:
             t = (self.date - dt.datetime(1970, 1, 1) - dt.timedelta(minutes=int(minute))).total_seconds()
             return 180 / np.pi * geopack.recalc(t)
 
-        # TODO: inclusive or exclusive avgcalctime? E.g. 0-19 or 0-20 or 1-20?
         dipoles = np.vectorize(get_dipole_tilt)(np.arange(1, avgcalctime+1, dtype=int))
         self.dipole = np.nanmean(dipoles)
         # dipoles = []

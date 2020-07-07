@@ -4,6 +4,8 @@ from typing import Union, List
 from dataclasses import dataclass, field
 # Packages
 import numpy as np
+import pandas as pd
+from geopack import geopack
 # Self-written modules
 from ..data_extraction.test_OMNI import LoadOMNI
 from ..data_structures.tpa import TPA
@@ -37,9 +39,15 @@ class TPADataset:
         parameters = parameters.copy()
 
         if 'dipole' in parameters:
-            # TODO: add support for dipole of dataset
-            # self.get_dipole_data(self.avgcalctime)
-            # self.total['dipole'] = self.dipole
+            dataset_date_range = pd.date_range(self.start_time, self.end_time, freq='min')
+            dipoles = np.empty(dataset_date_range.shape, dtype=float)
+            for i, time in enumerate(dataset_date_range):
+                unix_time = (time - dt.datetime(1970, 1, 1)).total_seconds()
+                dipole = 180 / np.pi * geopack.recalc(unix_time)
+                dipoles[i] = dipole
+
+            self.total['dipole'] = dipoles
+
             parameters.remove('dipole')
 
         OMNI_data_loader = LoadOMNI(self.start_time, self.end_time, data_dir=OMNI_dir)
