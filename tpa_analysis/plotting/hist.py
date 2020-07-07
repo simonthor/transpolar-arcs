@@ -5,7 +5,7 @@ import numpy as np
 
 
 def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True,
-           nbins: np.ndarray = np.linspace(-20, 20, 40), norm_ymax=10, log=False):
+           nbins: np.ndarray = np.linspace(-20, 20, 40), norm_ymax=10, log=False, bg_label='total IMF'):
     """Plots 1D histogram of e.g. BxGSM.
     foreground (array_like): data for the TPAs.
     background (array_like): all the data for the IMF during the period of the dataset.
@@ -15,7 +15,7 @@ def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True
 
     axis.axvline(0, color="grey", lw=1, zorder=-1)
     bg_hist_values, _, _ = axis.hist(background, bins=nbins, weights=np.ones_like(background) / len(background),
-                                     label='total IMF', histtype='step', zorder=0)
+                                     label=bg_label, histtype='step', zorder=0)
     fg_hist_values, bins, _ = axis.hist(foreground, bins=nbins, weights=np.ones_like(foreground) / len(foreground),
                                         label=dataset_name, histtype='step', zorder=1)
     if normalize:
