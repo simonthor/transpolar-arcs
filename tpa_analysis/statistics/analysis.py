@@ -38,7 +38,8 @@ def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, 
     merged_sample = merged_sample[merged_sample != -1]
     merged_comparison = merged_comparison[merged_comparison != -1]
 
-    assert (merged_comparison >= 5).all()
+    # TODO: this often raises error, something is wrong with this function
+    assert (merged_comparison >= 5).all(), merged_comparison
 
     print(merged_sample, merged_comparison)
     _, p_value = stats.chisquare(merged_sample, merged_comparison, *args, **kwargs)

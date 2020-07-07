@@ -17,9 +17,9 @@ class DataExtract:
         self.tpa_dir = tpa_dir
         self.name_to_function = {'Fear & Milan (2012)': self.fear_dataclean,
                                  'Kullen et al. (2002)': self.kullen_dataclean,
-                                 'Cumnock et al. (2009)': self.cumnock0_dataclean,
+                                 'Cumnock et al. (2009)': self.cumnock2009_dataclean,
                                  'Reidy et al. (2018)': self.reidy_dataclean,
-                                 'Cumnock et al. (2005)': self.cumnock1_dataclean,
+                                 'Cumnock (2005)': self.cumnock2005_dataclean,
                                  'New dataset': self.simon_dataclean}
 
     def get_tpas(self, dataset_name: str, *args, **kwargs):
@@ -56,8 +56,8 @@ class DataExtract:
                     yield TPA(dt.datetime.strptime(tpa_parameters[0] + line[11:15], "%y%m%d%H%M"), hemisphere="n",
                               moving=motion, dadu=dadu)
 
-    def cumnock0_dataclean(self, filename="Single_Multiple_Arcs_IMF_dipole_list_2015_AK_prel_dadu.xls",
-                           usecols="A, C, D, N", sheet_name="Sheet1"):
+    def cumnock2009_dataclean(self, filename="Single_Multiple_Arcs_IMF_dipole_list_2015_AK_prel_dadu.xls",
+                              usecols="A, C, D, N", sheet_name="Sheet1"):
         """Extracting Cumnock's first dataset."""
         filename = self.tpa_dir + filename
 
@@ -69,6 +69,7 @@ class DataExtract:
                 else:
                     num = False
             except Exception as e:
+                #TODO: check these cases
                 print(f'error: {e}')
                 num = False
                 if type(row[0]) == str and "Single" in row[0]:
@@ -83,7 +84,7 @@ class DataExtract:
                     dadu = None
                 yield TPA(date, hemisphere=row[1], moving="yes", dadu=dadu)
 
-    def cumnock1_dataclean(self, filename="listoftimes.xls", sheet_name="Sheet1", usecols="A, G, M"):
+    def cumnock2005_dataclean(self, filename="listoftimes.xls", sheet_name="Sheet1", usecols="A, G, M"):
         """Extracting Cumnock's second data."""
         filename = self.tpa_dir + filename
 
@@ -185,7 +186,7 @@ class DataExtract:
                                                        '%d%b%Y%H:%M'),
                                   hemisphere=parameters[9].lower(), conjugate=False)
 
-    def simon_dataclean(self, filename: str, *args, **kwargs):
+    def simon_dataclean(self, filename: str = 'Simon identified arcs_200704.xlsx', ignore_noimage=True, *args, **kwargs):
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
 
@@ -227,7 +228,7 @@ class DataExtract:
             tpa_dfs.append(all_tpa_df.iloc[i+1:j, :])
 
         for tpa in tpa_dfs:
-            if (tpa['Conjugacy/FOV'].str.contains('no image', na=False)).all():
+            if ignore_noimage and (tpa['Conjugacy/FOV'].str.contains('no image', na=False)).all():
                 continue
 
             tpa = tpa.sort_values(by=['Date', 'Time'])
@@ -237,11 +238,14 @@ class DataExtract:
                               hemisphere=first_detection_m['Hemi-sphere'], conjugate='multiple')
 
             for hemisphere in 'ns':
-                hemisphere_tpas = tpa[tpa['Hemi-sphere'] == hemisphere]
+                hemisphere_tpas = tpa[tpa['Hemi-sphere'].str.lower() == hemisphere]
                 # TODO: add more restrictions to which TPAs should be returned and which not
                 if not (hemisphere_tpas.empty or hemisphere_tpas['Time'].isnull().all()):
                     first_detection = hemisphere_tpas.iloc[0, :]
-                    yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']), hemisphere=hemisphere)
+                    if not (first_detection.name in multiple_arc_idx.index[multiple_arc_idx]):
+                        yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']), hemisphere=hemisphere)
+                    else:
+                        print(first_detection)
 
     @staticmethod
     def calc_motion(mlt_start, mlt_end):
@@ -264,7 +268,7 @@ class DataExtract:
         else:
             dadu = "dusk"
         # else:
-        #    print("Unknown value of dadu (dawn or dusk): {}".format(mlt1))
+            #    print("Unknown value of dadu (dawn or dusk): {}".format(mlt1))
         #    dadu = None
 
         return dadu
