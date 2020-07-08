@@ -235,11 +235,10 @@ class DataExtract:
             if (multiple_arc_idx := tpa['Conjugacy/FOV'].str.contains('multiple arcs', na=False)).any():
                 for i, first_detection_m in tpa[multiple_arc_idx].iterrows():
                     yield TPA(dt.datetime.combine(first_detection_m['Date'].date(), first_detection_m['Time']),
-                              hemisphere=first_detection_m['Hemi-sphere'], conjugate='multiple')
+                              hemisphere=first_detection_m['Hemi-sphere'].lower(), conjugate='multiple')
 
             for hemisphere in 'ns':
                 hemisphere_tpas = tpa[tpa['Hemi-sphere'].str.lower() == hemisphere]
-                # TODO: add more restrictions to which TPAs should be returned and which not
                 if not (hemisphere_tpas.empty or hemisphere_tpas['Time'].isnull().all()):
                     first_detection = hemisphere_tpas.iloc[0, :]
                     if not (first_detection.name in multiple_arc_idx.index[multiple_arc_idx]):
