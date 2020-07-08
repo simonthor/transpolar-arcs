@@ -1,4 +1,2 @@
-from .data_extraction.tpa_extract import DataExtract
-from .data_extraction.test_OMNI import LoadOMNI
-from .data_structures.tpa import TPA
-from .data_structures.tpa_dataset import TPADataset
+from .data_extraction import DataExtract, LoadOMNI
+from .data_structures import TPA, TPADataset
