@@ -186,7 +186,8 @@ class DataExtract:
                                                        '%d%b%Y%H:%M'),
                                   hemisphere=parameters[9].lower(), conjugate=False)
 
-    def simon_dataclean(self, filename: str = 'Simon identified arcs_200704.xlsx', ignore_noimage=True, *args, **kwargs):
+    def simon_dataclean(self, filename: str = 'Simon identified arcs_200704.xlsx', ignore_noimage: bool = True,
+                        ignore_singlearcs_with_multiple: bool = False, *args, **kwargs):
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
 
@@ -236,6 +237,8 @@ class DataExtract:
                 for i, first_detection_m in tpa[multiple_arc_idx].iterrows():
                     yield TPA(dt.datetime.combine(first_detection_m['Date'].date(), first_detection_m['Time']),
                               hemisphere=first_detection_m['Hemi-sphere'].lower(), conjugate='multiple')
+                if ignore_singlearcs_with_multiple:
+                    continue
 
             for hemisphere in 'ns':
                 hemisphere_tpas = tpa[tpa['Hemi-sphere'].str.lower() == hemisphere]
