@@ -15,7 +15,7 @@ class TPA:
     hemisphere: str = ''
     dadu: str = ''
     moving: str = ''
-    conjugate: bool = False
+    conjugate: str = ''
     dipole: float = field(init=False, default=np.nan)
     properties: dict = field(init=False)
 

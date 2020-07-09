@@ -188,6 +188,8 @@ class DataExtract:
 
     def simon_dataclean(self, filename: str = 'Simon identified arcs_200704.xlsx', ignore_noimage: bool = True,
                         ignore_singlearcs_with_multiple: bool = False, *args, **kwargs):
+        """TODO: add docstring"""
+
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
 
@@ -201,7 +203,7 @@ class DataExtract:
             notes.index = ['Note N', 'Note S', 'Conjugacy/FOV']
             return pd.concat([southern.iloc[:-1] if pd.notnull(southern['Time']) else northern[:-1], notes])
 
-        # TODO: Slow
+        # TODO: Slow, do not use apply
         merged_sn_df = datafile.apply(merge_sn, axis=1)
         # northern = datafile.iloc[:, :datafile.columns.get_loc('Date.1')]
         # southern = datafile.iloc[:, datafile.columns.get_loc('Date.1'):]
@@ -228,6 +230,7 @@ class DataExtract:
         for i, j in zip(tpa_separator_index[:-1], tpa_separator_index[1:]):
             tpa_dfs.append(all_tpa_df.iloc[i+1:j, :])
 
+        # TODO: guard clauses
         for tpa in tpa_dfs:
             if ignore_noimage and (tpa['Conjugacy/FOV'].str.contains('no image', na=False)).all():
                 continue
@@ -245,9 +248,21 @@ class DataExtract:
                 if not (hemisphere_tpas.empty or hemisphere_tpas['Time'].isnull().all()):
                     first_detection = hemisphere_tpas.iloc[0, :]
                     if not (first_detection.name in multiple_arc_idx.index[multiple_arc_idx]):
-                        yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']), hemisphere=hemisphere)
-                    else:
-                        print(first_detection)
+                        #print(first_detection['Conjugacy/FOV'])
+                        if pd.isnull(first_detection['Conjugacy/FOV']):
+                            conjugate_type = 'conjugate'
+                        elif 'non-conjugate' in first_detection['Conjugacy/FOV']:
+                            conjugate_type = 'non-conjugate'
+                        elif 'conjugate' in first_detection['Conjugacy/FOV']:
+                            conjugate_type = 'conjugate below'
+                        elif 'no image' in first_detection['Conjugacy/FOV']:
+                            conjugate_type = ''
+                        else:
+                            conjugate_type = 'conjugate'
+                            print(f"encountered unexpected value '{first_detection['Conjugacy/FOV']}'")
+
+                        yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']),
+                                  hemisphere=hemisphere, conjugate=conjugate_type)
 
     @staticmethod
     def calc_motion(mlt_start, mlt_end):
