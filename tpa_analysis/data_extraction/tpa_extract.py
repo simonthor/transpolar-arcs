@@ -186,6 +186,54 @@ class DataExtract:
                                                        '%d%b%Y%H:%M'),
                                   hemisphere=parameters[9].lower(), conjugate=False)
 
+    # TODO: remove copied code and call this function from simon_dataclean
+    def thor_dfs(self, filename: str = 'Simon identified arcs_200704.xlsx', *args, **kwargs):
+        datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
+        datafile.replace(' ', np.nan, inplace=True)
+
+        def merge_sn(row):
+            """Merge northern and southern hemisphere into one column"""
+            northern = row.iloc[:row.index.get_loc('Conjugacy/FOV')]
+            southern = row.iloc[row.index.get_loc('Date.1'):]
+            southern.index = [name.replace('.1', '') for name in southern.index]
+            x_index = [colname for colname in southern.index if re.fullmatch('X[0-9]', colname[:2])]
+            notes = pd.concat([northern[['Notes']], southern[['Notes']], row[['Conjugacy/FOV']]])
+            notes.index = ['Note N', 'Note S', 'Conjugacy/FOV']
+            return pd.concat([southern.iloc[:-1] if pd.notnull(southern['Time']) else northern[:-1], notes])
+
+        # TODO: Slow, do not use apply
+        merged_sn_df = datafile.apply(merge_sn, axis=1)
+
+        # northern = datafile.iloc[:, :datafile.columns.get_loc('Date.1')]
+        # southern = datafile.iloc[:, datafile.columns.get_loc('Date.1'):]
+        # southern.columns = [name.replace('.1', '') for name in southern.columns]
+        # pd.concat([northern, southern], axis=1, join='inner')
+
+        def listify(row, x_index):
+            """merge all X position columns (X1-X6) into one list
+            TODO: Probably inefficient. Use pd.Series.notna() and turn Series into list?
+            """
+            tpa_list = [tpa_loc for tpa_loc in row[x_index] if pd.notnull(tpa_loc)]
+            if tpa_list:
+                return tpa_list
+            else:
+                return np.nan
+
+        all_tpa_df = merged_sn_df.copy()
+        all_tpa_df.insert(loc=all_tpa_df.columns.get_loc('Hemi-sphere') + 1, column='X',
+                          value=merged_sn_df.apply(listify, axis=1,
+                                                   x_index=[colname for colname in merged_sn_df.columns if
+                                                            re.fullmatch('X[0-9]', colname[:2])]))
+        all_tpa_df.drop([colname for colname in merged_sn_df.columns if re.fullmatch('X[0-9]', colname[:2])], axis=1,
+                        inplace=True)
+        # Create separate dataframe for each TPA event
+        tpa_separator_index = all_tpa_df.index[all_tpa_df.isnull().all(1)]
+        tpa_dfs = [all_tpa_df.iloc[:tpa_separator_index[0], :]]
+        for i, j in zip(tpa_separator_index[:-1], tpa_separator_index[1:]):
+            tpa_dfs.append(all_tpa_df.iloc[i + 1:j, :])
+
+        return tpa_dfs
+
     def simon_dataclean(self, filename: str = 'Simon identified arcs_200704.xlsx', ignore_noimage: bool = True,
                         ignore_singlearcs_with_multiple: bool = False, *args, **kwargs):
         """TODO: add docstring"""
@@ -227,6 +275,7 @@ class DataExtract:
         # Create separate dataframe for each TPA event
         tpa_separator_index = all_tpa_df.index[all_tpa_df.isnull().all(1)]
         tpa_dfs = [all_tpa_df.iloc[:tpa_separator_index[0], :]]
+        # TODO: Does not include last TPA
         for i, j in zip(tpa_separator_index[:-1], tpa_separator_index[1:]):
             tpa_dfs.append(all_tpa_df.iloc[i+1:j, :])
 
@@ -238,6 +287,7 @@ class DataExtract:
             tpa = tpa.sort_values(by=['Date', 'Time'])
             if (multiple_arc_idx := tpa['Conjugacy/FOV'].str.contains('multiple arcs', na=False)).any():
                 for i, first_detection_m in tpa[multiple_arc_idx].iterrows():
+                    # TODO: add x-axis coordinate when initializing TPA
                     yield TPA(dt.datetime.combine(first_detection_m['Date'].date(), first_detection_m['Time']),
                               hemisphere=first_detection_m['Hemi-sphere'].lower(), conjugate='multiple')
                 if ignore_singlearcs_with_multiple:
@@ -248,7 +298,6 @@ class DataExtract:
                 if not (hemisphere_tpas.empty or hemisphere_tpas['Time'].isnull().all()):
                     first_detection = hemisphere_tpas.iloc[0, :]
                     if not (first_detection.name in multiple_arc_idx.index[multiple_arc_idx]):
-                        #print(first_detection['Conjugacy/FOV'])
                         if pd.isnull(first_detection['Conjugacy/FOV']):
                             conjugate_type = 'conjugate'
                         elif 'non-conjugate' in first_detection['Conjugacy/FOV']:
@@ -261,6 +310,7 @@ class DataExtract:
                             conjugate_type = 'conjugate'
                             print(f"encountered unexpected value '{first_detection['Conjugacy/FOV']}'")
 
+                        # TODO: add x-axis coordinate when initializing TPA
                         yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']),
                                   hemisphere=hemisphere, conjugate=conjugate_type)
 
