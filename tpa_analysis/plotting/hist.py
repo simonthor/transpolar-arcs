@@ -39,7 +39,7 @@ def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True
 
 
 def hist2d_scatter(x, y, bg_x, bg_y, axis: Axes, dataset_name: str, normalize=True, marker_color: str = 'k', bins=300,
-                   colormap_name: str = 'jet', color_bar=False):
+                   colormap_name: str = 'jet', color_bar=False, hist2dkw={}, scatterkw={}):
     """Plots 2D histogram with two parameters (e.g. BxGSM and ByGSM).
     x, y (array_like): Values of the TPAs for the parameter that will be plotted on the x- or y-axis.
                        This data will correspond to the dots in the plot.
@@ -55,12 +55,15 @@ def hist2d_scatter(x, y, bg_x, bg_y, axis: Axes, dataset_name: str, normalize=Tr
     bg_omit_index = np.isnan(bg_x) | np.isnan(bg_y)
     bg_x = bg_x[~bg_omit_index]
     bg_y = bg_y[~bg_omit_index]
-    counts, xedges, yedges, im = axis.hist2d(bg_x, bg_y, bins=bins, cmap=colormap, density=normalize, zorder=0)
+    counts, xedges, yedges, im = axis.hist2d(bg_x, bg_y, bins=bins, cmap=colormap, density=normalize, zorder=0, **hist2dkw)
 
     if color_bar:
         cbar = plt.colorbar(im, ax=axis)
         cbar.set_label('IMF probability distribution', rotation=270, labelpad=10)
 
-    axis.scatter(x, y, s=30, marker='P', edgecolors='w', linewidth=0.5, label=dataset_name, c=marker_color, zorder=2)
+    scatter = axis.scatter(x, y, s=30, marker='P', edgecolors='w', linewidth=0.5, label=dataset_name,
+                           c=marker_color[~omit_index] if isinstance(marker_color, np.ndarray) else marker_color, zorder=2, **scatterkw)
+
     axis.set_facecolor(colormap(0))
     axis.legend(loc=1)
+    return scatter, counts, xedges, yedges, im

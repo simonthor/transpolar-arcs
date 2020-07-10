@@ -20,7 +20,8 @@ class DataExtract:
                                  'Cumnock et al. (2009)': self.cumnock2009_dataclean,
                                  'Reidy et al. (2018)': self.reidy_dataclean,
                                  'Cumnock (2005)': self.cumnock2005_dataclean,
-                                 'New dataset': self.simon_dataclean}
+                                 'New dataset': self.simon_dataclean,
+                                 'This study': self.simon_dataclean}
 
     def get_tpas(self, dataset_name: str, *args, **kwargs):
         """Small wrapper for calling all TPA extraction functions based on dataset_name.
@@ -275,8 +276,7 @@ class DataExtract:
         # Create separate dataframe for each TPA event
         tpa_separator_index = all_tpa_df.index[all_tpa_df.isnull().all(1)]
         tpa_dfs = [all_tpa_df.iloc[:tpa_separator_index[0], :]]
-        # TODO: Does not include last TPA
-        for i, j in zip(tpa_separator_index[:-1], tpa_separator_index[1:]):
+        for i, j in zip(tpa_separator_index, np.append(tpa_separator_index[1:], None)):
             tpa_dfs.append(all_tpa_df.iloc[i+1:j, :])
 
         # TODO: guard clauses
@@ -310,9 +310,14 @@ class DataExtract:
                             conjugate_type = 'conjugate'
                             print(f"encountered unexpected value '{first_detection['Conjugacy/FOV']}'")
 
-                        # TODO: add x-axis coordinate when initializing TPA
+                        if isinstance(first_detection['X'], list) and len(first_detection['X']) == 1:
+                            # (181+260)/2 = 220.5
+                            dadu = 'dawn' if first_detection['X'][0] > 220.5 else 'dusk'
+                        else:
+                            dadu = ''
+
                         yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']),
-                                  hemisphere=hemisphere, conjugate=conjugate_type)
+                                  hemisphere=hemisphere, conjugate=conjugate_type, dadu=dadu)
 
     @staticmethod
     def calc_motion(mlt_start, mlt_end):
@@ -321,22 +326,19 @@ class DataExtract:
         if d > 12:
             d = 24 - d
         if d > 2:
-            motion = "yes"
+            return "yes"
         else:
-            motion = "no"
-
-        return motion
+            return "no"
 
     @staticmethod
     def calc_dadu(mlt):
         """Checks if TPA is on dawn or dusk side."""
         if 0 < mlt <= 12:
-            dadu = "dawn"
+            return "dawn"
         else:
-            dadu = "dusk"
+            return "dusk"
         # else:
             #    print("Unknown value of dadu (dawn or dusk): {}".format(mlt1))
         #    dadu = None
 
-        return dadu
 
