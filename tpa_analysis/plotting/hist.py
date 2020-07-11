@@ -2,6 +2,7 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib import cm
 import numpy as np
+from contextlib import contextmanager
 
 
 def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True,
@@ -67,3 +68,24 @@ def hist2d_scatter(x, y, bg_x, bg_y, axis: Axes, dataset_name: str, normalize=Tr
     axis.set_facecolor(colormap(0))
     axis.legend(loc=1)
     return scatter, counts, xedges, yedges, im
+
+
+@contextmanager
+def hist2d_plot(save=False, cmap='jet', clear=True, *args, **kwargs):
+    fig, ax = plt.subplots(*args, **kwargs)
+    if isinstance(ax, Axes):
+        ax = [ax]
+
+    for subplot in ax:
+        subplot.axhline(0, color='grey', zorder=1)
+        subplot.axvline(0, color='grey', zorder=1)
+        subplot.set_facecolor(cm.get_cmap(cmap)(0))
+
+    yield
+
+    if save:
+        fig.savefig(save)
+
+    if clear:
+        plt.close(fig)
+        del fig, ax
