@@ -29,7 +29,8 @@ def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True
         label = normalized_axis.set_ylabel('IMF normalized TPA distribution', color='g')
         label.set_color('g')
 
-    axis.legend()
+    axis.legend(loc='upper left')
+
     if log:
         axis.set_xscale('log')
 
@@ -66,7 +67,7 @@ def hist2d_scatter(x, y, bg_x, bg_y, axis: Axes, dataset_name: str, normalize=Tr
                            c=marker_color[~omit_index] if isinstance(marker_color, np.ndarray) else marker_color, zorder=2, **scatterkw)
 
     axis.set_facecolor(colormap(0))
-    axis.legend(loc=1)
+    axis.legend(loc='upper left')
     return scatter, counts, xedges, yedges, im
 
 
