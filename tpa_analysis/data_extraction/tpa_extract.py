@@ -230,12 +230,12 @@ class DataExtract:
         # Create separate dataframe for each TPA event
         tpa_separator_index = all_tpa_df.index[all_tpa_df.isnull().all(1)]
         tpa_dfs = [all_tpa_df.iloc[:tpa_separator_index[0], :]]
-        for i, j in zip(tpa_separator_index[:-1], tpa_separator_index[1:]):
+        for i, j in zip(tpa_separator_index, np.append(tpa_separator_index[1:], None)):
             tpa_dfs.append(all_tpa_df.iloc[i + 1:j, :])
 
         return tpa_dfs
 
-    def simon_dataclean(self, filename: str = 'Simon identified arcs_200704.xlsx', ignore_noimage: bool = True,
+    def simon_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_200714.xlsx', ignore_noimage: bool = True,
                         ignore_singlearcs_with_multiple: bool = False, *args, **kwargs):
         """TODO: add docstring"""
         tpa_dfs = self.thor_dfs(filename, *args, **kwargs)
@@ -282,6 +282,9 @@ class DataExtract:
 
         # TODO: guard clauses
         for tpa in tpa_dfs:
+            if tpa['Conjugacy/FOV'].str.contains('- ignore!', na=False).any():
+                continue
+
             if ignore_noimage and (tpa['Conjugacy/FOV'].str.contains('no image', na=False)).all():
                 continue
 
@@ -309,7 +312,8 @@ class DataExtract:
                             conjugate_type = ''
                         else:
                             conjugate_type = 'conjugate'
-                            print(f"encountered unexpected value '{first_detection['Conjugacy/FOV']}'")
+                            print(f"encountered unexpected value '{first_detection['Conjugacy/FOV']}'.\n"
+                                  f"Setting conjugate_type value to default: '{conjugate_type}'.")
 
                         if isinstance(first_detection['X'], list) and len(first_detection['X']) == 1:
                             # (181+260)/2 = 220.5
