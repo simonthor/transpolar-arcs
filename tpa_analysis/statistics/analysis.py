@@ -1,19 +1,21 @@
 import numpy as np
 from scipy import stats
+from typing import Tuple
 
 
-def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, *args, **kwargs) -> float:
+def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, *args, **kwargs) -> Tuple[float, np.ndarray, np.ndarray, np.ndarray]:
     """Calculate chi-square test p-value for sample and comparison.
     Will bin samples with fewer values than smaller than 5
-    TODO: Test if scipy.stats.kstest works too
+    TODO: Test if scipy.stats.kstest works too?
     """
     if (total := comparison.sum()) < 5:
         raise ValueError(f'Sum of comparison must be at least 5 but comparison only contained a total of {total}.')
 
     if (comparison >= 5).all():
         _, p_value = stats.chisquare(sample, comparison, *args, **kwargs)
-        return p_value
+        return p_value, sample, comparison, bins
 
+    # Use algorithm to merge bins to contain at least 5 elements
     merged_comparison, merged_sample, merged_bins = np.copy(comparison), np.copy(sample), np.array(bins, copy=True, dtype=float)
 
     for i in range(merged_comparison.size-1):
@@ -42,7 +44,5 @@ def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, 
 
     assert (merged_comparison >= 5).all(), merged_comparison
 
-    print(f'{merged_sample=}\n{merged_comparison=}\n{merged_bins=}')
-
     _, p_value = stats.chisquare(merged_sample, merged_comparison, *args, **kwargs)
-    return p_value
+    return p_value, merged_comparison, merged_sample, merged_bins
