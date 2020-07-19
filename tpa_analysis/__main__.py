@@ -1,6 +1,6 @@
-from .data_extraction.tpa_extract import DataExtract
+import tpa_analysis.statistics as tst
+import numpy as np
 
 if __name__ == '__main__':
-    extractor = DataExtract(r'F:/Simon TPA research/2019 Lei DMSP TPA list/DMSP_arcs/')
-    for tpa in extractor.simon_dataclean('Simon identified arcs_200702b.xlsx'):
-        print(tpa)
+    sample = np.array([0, 1, 0, 1, 2, 1, 0, 0, 1])
+    print(tst.compare_dists(sample, sample, np.arange(-1, sample.size)))
