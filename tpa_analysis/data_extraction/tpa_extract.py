@@ -20,8 +20,8 @@ class DataExtract:
                                  'Cumnock et al. (2009)': self.cumnock2009_dataclean,
                                  'Reidy et al. (2018)': self.reidy_dataclean,
                                  'Cumnock (2005)': self.cumnock2005_dataclean,
-                                 'New dataset': self.simon_dataclean,
-                                 'This study': self.simon_dataclean}
+                                 'New dataset': self.thor_dataclean,
+                                 'This study': self.thor_dataclean}
 
     def get_tpas(self, dataset_name: str, *args, **kwargs):
         """Small wrapper for calling all TPA extraction functions based on dataset_name.
@@ -187,8 +187,7 @@ class DataExtract:
                                                        '%d%b%Y%H:%M'),
                                   hemisphere=parameters[9].lower(), conjugate=False)
 
-    # TODO: remove copied code and call this function from simon_dataclean
-    def thor_dfs(self, filename: str = 'Sept_Oct_2015_TPAs_200714.xlsx', *args, **kwargs):
+    def thor_dfs(self, filename: str = 'Sept_Oct_2015_TPAs_200716.xlsx', *args, **kwargs):
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
 
@@ -235,8 +234,8 @@ class DataExtract:
 
         return tpa_dfs
 
-    def simon_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_200714.xlsx', ignore_noimage: bool = True,
-                        ignore_singlearcs_with_multiple: bool = False, *args, **kwargs):
+    def thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_200716.xlsx', ignore_noimage: bool = True,
+                       ignore_singlearcs_with_multiple: bool = False, *args, **kwargs):
         """TODO: add docstring"""
         tpa_dfs = self.thor_dfs(filename, *args, **kwargs)
 
