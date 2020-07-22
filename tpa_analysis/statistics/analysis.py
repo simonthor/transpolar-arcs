@@ -5,8 +5,39 @@ from typing import Tuple
 
 def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, *args, **kwargs) -> Tuple[float, np.ndarray, np.ndarray, np.ndarray]:
     """Calculate chi-square test p-value for sample and comparison.
-    Will bin samples with fewer values than smaller than 5
+
+    This function uses scipy.stats.chisquare to calculate the p value.
+    However, if necessary, this function will merge bins with fewer than 5 counts in `comparison` with neighboring bins to yield a statistically significant result.
+
+    Parameters
+    ----------
+    sample : numpy.ndarray
+        The measured counts. Must have `size(sample) < 1`.
+    comparison : numpy.ndarray
+        The expected counts. Must have `size(comparison) = size(sample)`.
+    bins : numpy.ndarray
+        The bin edges of the counts measured and the expected counts. Must have `size(bins) = size(sample)+1.
+    *args : any, optional
+        Other input arguments for scipy.stats.chisquare.
+    **kwargs : any, optional
+        Other input keyword arguments for scipy.stats.chisquare.
+
+    Returns
+    ----------
+    p_value : float
+        p value measuring how well `sample` and `comparison` match. 1 means a perfect match and 0 means not similar at all.
+    merged_sample : numpy.ndarray
+        The `sample` input array but bins with fewer than 5 counts have been merged with neighboring bins.
+    merged_comparison :  numpy.ndarray
+        The `comparison` input array but bins with fewer than 5 counts have been merged with neighboring bins.
+    merged_bins : numpy.ndarray
+        The `bins` input array but bins with fewer than 5 counts have been merged with neighboring bins.
+
+    See also
+    ----------
+    `scipy.stats.chisquare <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chisquare.html>`_
     """
+
     if (total := comparison.sum()) < 5:
         raise ValueError(f'Sum of comparison must be at least 5 but comparison only contained a total of {total}.')
     if comparison.size != sample.size or (bins.size - comparison.size) == 1:
