@@ -40,7 +40,7 @@ def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, 
 
     if (total := comparison.sum()) < 5:
         raise ValueError(f'Sum of comparison must be at least 5 but comparison only contained a total of {total}.')
-    if comparison.size != sample.size or (bins.size - comparison.size) == 1:
+    if (comparison.size != sample.size) or (bins.size != comparison.size + 1):
         raise ValueError('comparison and sample must be equal size with bins being sample.size + 1. '
                          f'Instead, sizes {sample.size=}, {comparison.size=}, {bins.size=} were given.')
 
