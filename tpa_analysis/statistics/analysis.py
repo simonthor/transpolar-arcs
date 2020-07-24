@@ -78,4 +78,4 @@ def compare_dists(sample: np.ndarray, comparison: np.ndarray, bins: np.ndarray, 
     assert (merged_comparison >= 5).all(), merged_comparison
 
     _, p_value = stats.chisquare(merged_sample, merged_comparison, *args, **kwargs)
-    return p_value, merged_comparison, merged_sample, merged_bins
+    return p_value, merged_sample, merged_comparison, merged_bins
