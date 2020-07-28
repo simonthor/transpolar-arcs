@@ -1,6 +1,5 @@
 from contextlib import contextmanager
 
-import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 import matplotlib
@@ -8,15 +7,14 @@ import matplotlib
 
 # TODO: create template figure for scatter plots? E.g:
 @contextmanager
-def scatter_template(save=False, *args, **kwargs):
+def scatter_template(save: str = False, *args, **kwargs):
     fig, ax = plt.subplots(*args, **kwargs)
     if isinstance(ax, Axes):
-        ax.axhline(0, color='grey', zorder=-1)
-        ax.axvline(0, color='grey', zorder=-1)
-    else:
-        for a in ax.flat:
-            a.axhline(0, color='grey', zorder=-1)
-            a.axvline(0, color='grey', zorder=-1)
+        ax = [ax]
+
+    for a in ax.flat:
+        a.axhline(0, color='grey', zorder=-1)
+        a.axvline(0, color='grey', zorder=-1)
 
     yield fig, ax
 

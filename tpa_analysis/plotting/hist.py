@@ -1,11 +1,11 @@
-from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
+import matplotlib.pyplot as plt
 from matplotlib import cm
+import matplotlib
 import numpy as np
 from contextlib import contextmanager
 
 
-def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True,
+def hist1d(foreground, background, axis: matplotlib.axes.Axes, dataset_name: str, normalize=True,
            nbins: np.ndarray = np.linspace(-20, 20, 40), norm_ymax=10, log=False, bg_label='total IMF'):
     """Plots 1D histogram of e.g. BxGSM.
     foreground (array_like): data for the TPAs.
@@ -40,7 +40,7 @@ def hist1d(foreground, background, axis: Axes, dataset_name: str, normalize=True
     return fg_hist_values, bg_hist_values, bins
 
 
-def hist2d_scatter(x, y, bg_x, bg_y, axis: Axes, dataset_name: str, normalize=True, marker_color: str = 'k', bins=300,
+def hist2d_scatter(x, y, bg_x, bg_y, axis: matplotlib.axes.Axes, dataset_name: str, normalize=True, marker_color: str = 'k', bins=300,
                    colormap_name: str = 'jet', color_bar=False, hist2dkw={}, scatterkw={}):
     """Plots 2D histogram with two parameters (e.g. BxGSM and ByGSM).
     x, y (array_like): Values of the TPAs for the parameter that will be plotted on the x- or y-axis.
@@ -74,7 +74,7 @@ def hist2d_scatter(x, y, bg_x, bg_y, axis: Axes, dataset_name: str, normalize=Tr
 @contextmanager
 def hist2d_plot(save=False, cmap='jet', clear=True, *args, **kwargs):
     fig, ax = plt.subplots(*args, **kwargs)
-    if isinstance(ax, Axes):
+    if isinstance(ax, matplotlib.axes.Axes):
         ax = [ax]
 
     for subplot in ax:
@@ -82,10 +82,15 @@ def hist2d_plot(save=False, cmap='jet', clear=True, *args, **kwargs):
         subplot.axvline(0, color='grey', zorder=1)
         subplot.set_facecolor(cm.get_cmap(cmap)(0))
 
-    yield
+    yield fig, ax
+
+    fig.tight_layout()
 
     if save:
         fig.savefig(save)
+
+    if 'inline' not in matplotlib.get_backend():
+        fig.show()
 
     if clear:
         plt.close(fig)
