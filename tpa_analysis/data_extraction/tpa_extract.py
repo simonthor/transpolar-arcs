@@ -235,7 +235,7 @@ class DataExtract:
         return tpa_dfs
 
     def thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_200716.xlsx', ignore_noimage: bool = True,
-                       ignore_singlearcs_with_multiple: bool = False, *args, **kwargs):
+                       ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, *args, **kwargs):
         """TODO: add docstring"""
         tpa_dfs = self.thor_dfs(filename, *args, **kwargs)
 
@@ -280,6 +280,8 @@ class DataExtract:
         #     tpa_dfs.append(all_tpa_df.iloc[i+1:j, :])
 
         # TODO: guard clauses
+        # TODO: This is horrendous spaghetti code. Must be refactored.
+        #  Begin by taking all first TPAs, then check for multiple arcs
         for tpa in tpa_dfs:
             if tpa['Conjugacy/FOV'].str.contains('- ignore!', na=False).any():
                 continue
@@ -288,6 +290,37 @@ class DataExtract:
                 continue
 
             tpa = tpa.sort_values(by=['Date', 'Time'])
+
+            if only_first_tpa:
+                for hemisphere in 'ns':
+                    hemisphere_tpas = tpa[tpa['Hemi-sphere'].str.lower() == hemisphere]
+                    if not (hemisphere_tpas.empty or hemisphere_tpas['Time'].isnull().all()):
+                        first_detection = hemisphere_tpas.iloc[0, :]
+                        if pd.isnull(first_detection['Conjugacy/FOV']):
+                            conjugate_type = 'conjugate'
+                        elif 'multiple arcs' in first_detection['Conjugacy/FOV']:
+                            conjugate_type = 'multiple'
+                        elif 'non-conjugate' in first_detection['Conjugacy/FOV']:
+                            conjugate_type = 'non-conjugate'
+                        elif 'conjugate' in first_detection['Conjugacy/FOV']:
+                            conjugate_type = 'conjugate below'
+                        elif 'no image' in first_detection['Conjugacy/FOV']:
+                            conjugate_type = ''
+                        else:
+                            conjugate_type = 'conjugate'
+                            print(f"encountered unexpected value '{first_detection['Conjugacy/FOV']}'.\n"
+                                  f"Setting conjugate_type value to default: '{conjugate_type}'.")
+
+                        if isinstance(first_detection['X'], list) and len(first_detection['X']) == 1:
+                            # (181+260)/2 = 220.5
+                            dadu = 'dawn' if first_detection['X'][0] > 220.5 else 'dusk'
+                        else:
+                            dadu = ''
+
+                        yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']),
+                                  hemisphere=hemisphere, conjugate=conjugate_type, dadu=dadu)
+                continue
+
             if (multiple_arc_idx := tpa['Conjugacy/FOV'].str.contains('multiple arcs', na=False)).any():
                 for i, first_detection_m in tpa[multiple_arc_idx].iterrows():
                     # TODO: add x-axis coordinate when initializing TPA
