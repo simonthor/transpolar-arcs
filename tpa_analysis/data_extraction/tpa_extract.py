@@ -316,6 +316,49 @@ class DataExtract:
                         yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']),
                                   hemisphere=hemisphere, conjugate=conjugate_type, dadu=dadu)
 
+    def new_thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_200805.xlsx', ignore_noimage: bool = True,
+                       ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, *args, **kwargs):
+        """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions."""
+        datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
+        datafile.replace(' ', np.nan, inplace=True)
+        linebreak = datafile.index[datafile.isnull().all(1)]
+        df_with_eventnr = datafile.copy()
+        df_with_eventnr['event nr'] = pd.NA
+        df_with_eventnr.loc[linebreak + 1, 'event nr'] = np.arange(linebreak.size)
+        df_with_eventnr = df_with_eventnr.drop(index=linebreak).reset_index()
+        df_with_eventnr.fillna(method='ffill', inplace=True)
+        first_n_index = df_with_eventnr[df_with_eventnr['Hemi-sphere'].str.lower() == 'n', :].groupby('event nr').first().index
+        first_s_index = df_with_eventnr[df_with_eventnr['Hemi-sphere'].str.lower() == 's', :].groupby('event nr').first().index
+        chosen_tpas_index = pd.Series(index=datafile.index, data=False, dtype=bool)
+        chosen_tpas_index[first_n_index.append(first_s_index)] = True
+        if ignore_noimage:
+            pass
+        if ignore_singlearcs_with_multiple:
+            pass
+        if only_first_tpa:
+            pass
+
+        for i, row in datafile[chosen_tpas_index].iterrows():
+            # TODO: Use groupby('event nr') to calculate conjugacy type
+            yield TPA()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     @staticmethod
     def calc_motion(mlt_start, mlt_end):
         """Checks if TPA is moving or not."""
