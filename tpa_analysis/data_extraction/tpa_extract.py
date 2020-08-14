@@ -187,22 +187,24 @@ class DataExtract:
                                                        '%d%b%Y%H:%M'),
                                   hemisphere=parameters[9].lower(), conjugate=False)
 
+    @staticmethod
+    def merge_sn(row):
+        """Merge northern and southern hemisphere into one column"""
+        northern = row.iloc[:row.index.get_loc('Conjugacy/FOV')]
+        southern = row.iloc[row.index.get_loc('Date.1'):]
+        southern.index = [name.replace('.1', '') for name in southern.index]
+        x_index = [colname for colname in southern.index if re.fullmatch('X[0-9]', colname[:2])]
+        notes = pd.concat([northern[['Notes']], southern[['Notes']], row[['Conjugacy/FOV']]])
+        notes.index = ['Note N', 'Note S', 'Conjugacy/FOV']
+        return pd.concat([southern.iloc[:-1] if pd.notnull(southern['Time']) else northern[:-1], notes])
+
     def thor_dfs(self, filename: str = 'Sept_Oct_2015_TPAs_200716.xlsx', *args, **kwargs):
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
 
-        def merge_sn(row):
-            """Merge northern and southern hemisphere into one column"""
-            northern = row.iloc[:row.index.get_loc('Conjugacy/FOV')]
-            southern = row.iloc[row.index.get_loc('Date.1'):]
-            southern.index = [name.replace('.1', '') for name in southern.index]
-            x_index = [colname for colname in southern.index if re.fullmatch('X[0-9]', colname[:2])]
-            notes = pd.concat([northern[['Notes']], southern[['Notes']], row[['Conjugacy/FOV']]])
-            notes.index = ['Note N', 'Note S', 'Conjugacy/FOV']
-            return pd.concat([southern.iloc[:-1] if pd.notnull(southern['Time']) else northern[:-1], notes])
 
         # TODO: Slow, do not use apply
-        merged_sn_df = datafile.apply(merge_sn, axis=1)
+        merged_sn_df = datafile.apply(self.merge_sn, axis=1)
 
         # northern = datafile.iloc[:, :datafile.columns.get_loc('Date.1')]
         # southern = datafile.iloc[:, datafile.columns.get_loc('Date.1'):]
@@ -321,33 +323,24 @@ class DataExtract:
         """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions."""
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
-        def merge_sn(row):
-            """Merge northern and southern hemisphere into one column"""
-            northern = row.iloc[:row.index.get_loc('Conjugacy/FOV')]
-            southern = row.iloc[row.index.get_loc('Date.1'):]
-            southern.index = [name.replace('.1', '') for name in southern.index]
-            x_index = [colname for colname in southern.index if re.fullmatch('X[0-9]', colname[:2])]
-            notes = pd.concat([northern[['Notes']], southern[['Notes']], row[['Conjugacy/FOV']]])
-            notes.index = ['Note N', 'Note S', 'Conjugacy/FOV']
-            return pd.concat([southern.iloc[:-1] if pd.notnull(southern['Time']) else northern[:-1], notes])
-        # TODO: Slow, do not use apply
-        merged_sn_df = datafile.apply(merge_sn, axis=1)
-
-        linebreak = merged_sn_df.index[datafile.isnull().all(1)]
-        df_with_eventnr = merged_sn_df.copy()
+        linebreak = datafile.index[datafile.isnull().all(1)]
+        df_with_eventnr = datafile.copy()
         df_with_eventnr['event nr'] = pd.NA
         df_with_eventnr.loc[linebreak + 1, 'event nr'] = np.arange(linebreak.size)
         df_with_eventnr = df_with_eventnr.drop(index=linebreak).reset_index()
         df_with_eventnr.fillna(method='ffill', inplace=True)
-        first_n_index = df_with_eventnr[df_with_eventnr['Hemi-sphere'].str.lower() == 'n'].groupby('event nr').first().index
-        first_s_index = df_with_eventnr[df_with_eventnr['Hemi-sphere'].str.lower() == 's'].groupby('event nr').first().index
-        chosen_tpas_index = pd.Series(index=datafile.index, data=False, dtype=bool)
+        # TODO: Slow, do not use apply. Optimize slighlty with groupby?
+        merged_sn_df = df_with_eventnr.apply(self.merge_sn, axis=1)
+
+        first_n_index = merged_sn_df[merged_sn_df['Hemi-sphere'].str.lower() == 'n'].groupby('event nr').first().index
+        first_s_index = merged_sn_df[merged_sn_df['Hemi-sphere'].str.lower() == 's'].groupby('event nr').first().index
+        chosen_tpas_index = pd.Series(index=merged_sn_df.index, data=False, dtype=bool)
         chosen_tpas_index[first_n_index.append(first_s_index)] = True
 
         if not only_first_tpa:
             pass
         if ignore_noimage:
-            chosen_tpas_index &= ~df_with_eventnr['Conjugacy/FOV'].str.contains('no image', na=False)
+            chosen_tpas_index &= ~merged_sn_df['Conjugacy/FOV'].str.contains('no image', na=False)
         if ignore_singlearcs_with_multiple:
             def contains_multiple(df):
                 # TODO: does not work
@@ -355,7 +348,7 @@ class DataExtract:
                 first_multiple_idx[df['Conjugacy/FOV'].str.contains('multiple').idxmax()] = True
                 return first_multiple_idx
 
-            df_with_eventnr.groupby('event nr').apply(contains_multiple)
+            merged_sn_df.groupby('event nr').apply(contains_multiple)
 
         for i, row in datafile[chosen_tpas_index].iterrows():
             # TODO: Use groupby('event nr') to calculate conjugacy type
