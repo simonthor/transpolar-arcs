@@ -70,7 +70,7 @@ class DataExtract:
                 else:
                     num = False
             except Exception as e:
-                #TODO: check these cases
+                # TODO: check these cases
                 print(f'error: {e}')
                 num = False
                 if type(row[0]) == str and "Single" in row[0]:
@@ -96,7 +96,8 @@ class DataExtract:
                 break
             elif isinstance(row[0], int) or "00" in str(row[0]):
                 if len(str(row[0])) >= 5:
-                    yield TPA(dt.datetime.strptime(str(row[0]) + str(row[1]), "%y%j%X"), hemisphere="n", moving="yes", dadu=row[2])
+                    yield TPA(dt.datetime.strptime(str(row[0]) + str(row[1]), "%y%j%X"), hemisphere="n", moving="yes",
+                              dadu=row[2])
                 else:
                     date = "0" * (5 - len(str(row[0]))) + str(row[0]) + str(row[1])
                     if len(usecols.split()) > 2:
@@ -201,7 +202,6 @@ class DataExtract:
     def thor_dfs(self, filename: str = 'Sept_Oct_2015_TPAs_200716.xlsx', *args, **kwargs):
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
-
 
         # TODO: Slow, do not use apply
         merged_sn_df = datafile.apply(self.merge_sn, axis=1)
@@ -319,18 +319,28 @@ class DataExtract:
                                   hemisphere=hemisphere, conjugate=conjugate_type, dadu=dadu)
 
     def new_thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_200805.xlsx', ignore_noimage: bool = True,
-                       ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, *args, **kwargs):
+                           ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, *args,
+                           **kwargs):
         """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions."""
         datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
-        linebreak = datafile.index[datafile.isnull().all(1)]
-        df_with_eventnr = datafile.copy()
+
+        # TODO: remove '- ignore' events using groupby
+        merged_sn_df = datafile.copy()
+        s_idx = merged_sn_df['Time.1'].notnull()
+        assert not (sn_overlap_idx := (s_idx & merged_sn_df['Time'].notnull())).any(), \
+            f'Both NH and SH arcs exist on same time for lines {merged_sn_df.index[sn_overlap_idx]}'
+        merged_sn_df.loc[s_idx, 'Time':'X4 dawn'] = merged_sn_df.loc[s_idx, 'Time.1':'X4 dawn.1']
+        merged_sn_df.drop(
+            merged_sn_df.columns[merged_sn_df.columns.find('Time.1'):merged_sn_df.columns.find('X4 dawn.1')],
+            inplace=True)
+
+        linebreak = merged_sn_df.index[merged_sn_df.isnull().all(1)]
+        df_with_eventnr = merged_sn_df.copy()
         df_with_eventnr['event nr'] = pd.NA
         df_with_eventnr.loc[linebreak + 1, 'event nr'] = np.arange(linebreak.size)
         df_with_eventnr = df_with_eventnr.drop(index=linebreak).reset_index()
         df_with_eventnr.fillna(method='ffill', inplace=True)
-        # TODO: Slow, do not use apply. Optimize slighlty with groupby?
-        merged_sn_df = df_with_eventnr.apply(self.merge_sn, axis=1)
 
         first_n_index = merged_sn_df[merged_sn_df['Hemi-sphere'].str.lower() == 'n'].groupby('event nr').first().index
         first_s_index = merged_sn_df[merged_sn_df['Hemi-sphere'].str.lower() == 's'].groupby('event nr').first().index
@@ -338,19 +348,20 @@ class DataExtract:
         chosen_tpas_index[first_n_index.append(first_s_index)] = True
 
         if not only_first_tpa:
-            pass
+            chosen_tpas_index[merged_sn_df[merged_sn_df['Conjugacy/FOV'].str.contains('multiple', na=False)]
+                .groupby('event nr').first().index] = True
         if ignore_noimage:
             chosen_tpas_index &= ~merged_sn_df['Conjugacy/FOV'].str.contains('no image', na=False)
         if ignore_singlearcs_with_multiple:
             def contains_multiple(df):
                 # TODO: does not work
                 first_multiple_idx = pd.Series(index=df.index, data=False)
-                first_multiple_idx[df['Conjugacy/FOV'].str.contains('multiple').idxmax()] = True
+                first_multiple_idx[df['Conjugacy/FOV'].str.contains('multiple', na=False).idxmax()] = True
                 return first_multiple_idx
 
             merged_sn_df.groupby('event nr').apply(contains_multiple)
 
-        for i, row in datafile[chosen_tpas_index].iterrows():
+        for i, row in merged_sn_df[chosen_tpas_index].iterrows():
             # TODO: Use groupby('event nr') to calculate conjugacy type
             yield TPA()
 
@@ -373,7 +384,5 @@ class DataExtract:
         else:
             return "dusk"
         # else:
-            #    print("Unknown value of dadu (dawn or dusk): {}".format(mlt1))
+        #    print("Unknown value of dadu (dawn or dusk): {}".format(mlt1))
         #    dadu = None
-
-
