@@ -342,18 +342,19 @@ class DataExtract:
         df_with_eventnr = df_with_eventnr.drop(index=linebreak).reset_index()
         df_with_eventnr.fillna(method='ffill', inplace=True)
 
-        first_n_index = merged_sn_df[merged_sn_df['Hemi-sphere'].str.lower() == 'n'].groupby('event nr', as_index=False).first().index
-        first_s_index = merged_sn_df[merged_sn_df['Hemi-sphere'].str.lower() == 's'].groupby('event nr', as_index=False).first().index
+        first_n_index = merged_sn_df[merged_sn_df['Hemi-sphere'].str.lower() == 'n'].drop_duplicates('event nr').index
+        first_s_index = merged_sn_df[merged_sn_df['Hemi-sphere'].str.lower() == 's'].drop_duplicates('event nr').index
         chosen_tpas_index = pd.Series(index=merged_sn_df.index, data=False, dtype=bool)
         chosen_tpas_index[first_n_index.append(first_s_index)] = True
 
         if not only_first_tpa:
             chosen_tpas_index[merged_sn_df[merged_sn_df['Conjugacy/FOV'].str.contains('multiple', na=False)]
-                .groupby('event nr', as_index=False).first().index] = True
+                .drop_duplicates('event nr').index] = True
         if ignore_noimage:
             chosen_tpas_index &= ~merged_sn_df['Conjugacy/FOV'].str.contains('no image', na=False)
         if ignore_singlearcs_with_multiple:
-            merged_sn_df.groupby('event nr', as_index=False)['Conjugacy/FOV'].str.contains('multiple').index
+            # TODO: not done here
+            merged_sn_df[merged_sn_df['Conjugacy/FOV'].str.contains('multiple')].index
 
         for i, row in merged_sn_df[chosen_tpas_index].iterrows():
             # TODO: Use groupby('event nr') to calculate conjugacy type
