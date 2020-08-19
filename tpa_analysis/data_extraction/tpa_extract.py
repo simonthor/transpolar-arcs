@@ -353,9 +353,13 @@ class DataExtract:
         if ignore_noimage:
             chosen_tpas_index &= ~merged_sn_df['Conjugacy/FOV'].str.contains('no image', na=False)
         if ignore_singlearcs_with_multiple:
-            # TODO: not done here
-            merged_sn_df[merged_sn_df['Conjugacy/FOV'].str.contains('multiple')].index
-
+            # TODO: This code is hard to understand. Might be possible to remove apply here too.
+            ignore_idx = merged_sn_df.groupby('event nr').apply(lambda event_df: pd.Series(
+                index=event_df.drop_duplicates('Hemi-sphere').index, name='ignore',
+                data=(multiple_idx := event_df['Conjugacy/FOV'].str.contains('multiple')).any() and event_df.index[0] != event_df.index[multiple_idx][0],
+                dtype=bool))
+            ignore_idx.drop(ignore_idx == False, inplace=True)
+            chosen_tpas_index[ignore_idx.index] = False
         for i, row in merged_sn_df[chosen_tpas_index].iterrows():
             # TODO: Use groupby('event nr') to calculate conjugacy type
             yield TPA()
