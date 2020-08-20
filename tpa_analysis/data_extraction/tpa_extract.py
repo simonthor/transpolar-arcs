@@ -322,11 +322,11 @@ class DataExtract:
                            ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, *args,
                            **kwargs):
         """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions."""
-        datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
-        datafile.replace(' ', np.nan, inplace=True)
+        raw_datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
 
         # TODO: remove '- ignore' events using groupby
-        merged_sn_df = datafile.copy()
+        merged_sn_df = raw_datafile.replace(' ', np.nan)
+
         s_idx = merged_sn_df['Time.1'].notnull()
         assert not (sn_overlap_idx := (s_idx & merged_sn_df['Time'].notnull())).any(), \
             f'Both NH and SH arcs exist on same time for lines {merged_sn_df.index[sn_overlap_idx]}'
@@ -341,26 +341,29 @@ class DataExtract:
         df_with_eventnr.loc[linebreak + 1, 'event nr'] = np.arange(linebreak.size)
         df_with_eventnr = df_with_eventnr.drop(index=linebreak).reset_index()
         df_with_eventnr.fillna(method='ffill', inplace=True)
-
-        first_n_index = merged_sn_df[merged_sn_df['Hemi-sphere'].str.lower() == 'n'].drop_duplicates('event nr').index
-        first_s_index = merged_sn_df[merged_sn_df['Hemi-sphere'].str.lower() == 's'].drop_duplicates('event nr').index
-        chosen_tpas_index = pd.Series(index=merged_sn_df.index, data=False, dtype=bool)
-        chosen_tpas_index[first_n_index.append(first_s_index)] = True
+        clean_df = df_with_eventnr.groupby('event nr').filter(
+            lambda event_df: not event_df['Conjugacy/FOV'].str.contains('- ignore', na=False).any())
+        first_sn_index = clean_df.reset_index().groupby(['event nr', 'Hemi-sphere']).first()['index'].values
+        # If line above does not work, use the two lines below
+        #first_n_index = clean_df[clean_df['Hemi-sphere'].str.lower() == 'n'].drop_duplicates('event nr').index
+        #first_s_index = clean_df[clean_df['Hemi-sphere'].str.lower() == 's'].drop_duplicates('event nr').index
+        chosen_tpas_index = pd.Series(index=clean_df.index, data=False, dtype=bool)
+        chosen_tpas_index[first_sn_index] = True
 
         if not only_first_tpa:
-            chosen_tpas_index[merged_sn_df[merged_sn_df['Conjugacy/FOV'].str.contains('multiple', na=False)]
+            chosen_tpas_index[clean_df[clean_df['Conjugacy/FOV'].str.contains('multiple', na=False)]
                 .drop_duplicates('event nr').index] = True
         if ignore_noimage:
-            chosen_tpas_index &= ~merged_sn_df['Conjugacy/FOV'].str.contains('no image', na=False)
+            chosen_tpas_index &= ~clean_df['Conjugacy/FOV'].str.contains('no image', na=False)
         if ignore_singlearcs_with_multiple:
             # TODO: This code is hard to understand. Might be possible to remove apply here too.
-            ignore_idx = merged_sn_df.groupby('event nr').apply(lambda event_df: pd.Series(
+            ignore_idx = clean_df.groupby('event nr').apply(lambda event_df: pd.Series(
                 index=event_df.drop_duplicates('Hemi-sphere').index, name='ignore',
                 data=(multiple_idx := event_df['Conjugacy/FOV'].str.contains('multiple')).any() and event_df.index[0] != event_df.index[multiple_idx][0],
                 dtype=bool))
             ignore_idx.drop(ignore_idx == False, inplace=True)
             chosen_tpas_index[ignore_idx.index] = False
-        for i, row in merged_sn_df[chosen_tpas_index].iterrows():
+        for i, row in clean_df[chosen_tpas_index].iterrows():
             # TODO: Use groupby('event nr') to calculate conjugacy type
             yield TPA()
 
