@@ -351,8 +351,7 @@ class DataExtract:
         chosen_tpas_index[first_sn_index] = True
 
         if not only_first_tpa:
-            chosen_tpas_index[clean_df[clean_df['Conjugacy/FOV'].str.contains('multiple', na=False)]
-                .drop_duplicates('event nr').index] = True
+            chosen_tpas_index[clean_df[clean_df['Conjugacy/FOV'].str.contains('multiple', na=False)].drop_duplicates('event nr').index] = True
         if ignore_noimage:
             chosen_tpas_index &= ~clean_df['Conjugacy/FOV'].str.contains('no image', na=False)
         if ignore_singlearcs_with_multiple:

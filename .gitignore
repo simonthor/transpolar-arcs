@@ -145,3 +145,5 @@ test_code/
 data/
 results/
 .old/
+*.ipynb
+!example.ipynb
