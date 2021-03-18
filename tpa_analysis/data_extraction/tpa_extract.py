@@ -21,7 +21,7 @@ class DataExtract:
                                  'Reidy et al. (2018)': self.reidy_dataclean,
                                  'Cumnock (2005)': self.cumnock2005_dataclean,
                                  'New dataset': self.thor_dataclean,
-                                 'This study': self.thor_dataclean}
+                                 'This study': self.new_thor_dataclean}
 
     def get_tpas(self, dataset_name: str, *args, **kwargs):
         """Small wrapper for calling all TPA extraction functions based on dataset_name.
@@ -324,47 +324,66 @@ class DataExtract:
         """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions."""
         raw_datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
 
-        # TODO: remove '- ignore' events using groupby
-        merged_sn_df = raw_datafile.replace(' ', np.nan)
+        # Clean data and merge SH columns with NH columns
+        merged_sn_df = raw_datafile.replace(' ', pd.NA)
 
         s_idx = merged_sn_df['Time.1'].notnull()
         assert not (sn_overlap_idx := (s_idx & merged_sn_df['Time'].notnull())).any(), \
-            f'Both NH and SH arcs exist on same time for lines {merged_sn_df.index[sn_overlap_idx]}'
-        merged_sn_df.loc[s_idx, 'Time':'X4 dawn'] = merged_sn_df.loc[s_idx, 'Time.1':'X4 dawn.1']
-        merged_sn_df.drop(
-            merged_sn_df.columns[merged_sn_df.columns.find('Time.1'):merged_sn_df.columns.find('X4 dawn.1')],
-            inplace=True)
+            f'Both NH and SH arcs exist on same time for lines {merged_sn_df.index[sn_overlap_idx] + 2}'
+        merged_sn_df.loc[s_idx, 'Time':'Notes'] = merged_sn_df.loc[s_idx, 'Time.1':'Notes.1'].values
+        # Remove all SH columns and beyond as I have merged SH with NH
+        merged_sn_df.drop(columns=merged_sn_df.columns[merged_sn_df.columns.get_loc('Date.1'):], inplace=True)
 
-        linebreak = merged_sn_df.index[merged_sn_df.isnull().all(1)]
+        # Separate dataframe into separate events by adding an event number
+        linebreak = merged_sn_df.index[merged_sn_df.isnull().all(axis=1)]
         df_with_eventnr = merged_sn_df.copy()
+        # Add eventnr column
         df_with_eventnr['event nr'] = pd.NA
         df_with_eventnr.loc[linebreak + 1, 'event nr'] = np.arange(linebreak.size)
         df_with_eventnr = df_with_eventnr.drop(index=linebreak).reset_index()
-        df_with_eventnr.fillna(method='ffill', inplace=True)
+        df_with_eventnr.rename(columns={'index': 'xlsx row'}, inplace=True)
+        df_with_eventnr['xlsx row'] += 2
+
+        df_with_eventnr['event nr'] = df_with_eventnr['event nr'].fillna(method='ffill')
         clean_df = df_with_eventnr.groupby('event nr').filter(
             lambda event_df: not event_df['Conjugacy/FOV'].str.contains('- ignore', na=False).any())
+        clean_df.reset_index(drop=True, inplace=True)
+        # TODO: remove events with "no event" in the Notes? Ask
+
         first_sn_index = clean_df.reset_index().groupby(['event nr', 'Hemi-sphere']).first()['index'].values
-        # If line above does not work, use the two lines below
-        #first_n_index = clean_df[clean_df['Hemi-sphere'].str.lower() == 'n'].drop_duplicates('event nr').index
-        #first_s_index = clean_df[clean_df['Hemi-sphere'].str.lower() == 's'].drop_duplicates('event nr').index
         chosen_tpas_index = pd.Series(index=clean_df.index, data=False, dtype=bool)
         chosen_tpas_index[first_sn_index] = True
-
         if not only_first_tpa:
-            chosen_tpas_index[clean_df[clean_df['Conjugacy/FOV'].str.contains('multiple', na=False)].drop_duplicates('event nr').index] = True
+            chosen_tpas_index[clean_df[clean_df['Conjugacy/FOV'].str.contains('multiple', na=False)].drop_duplicates(
+                'event nr').index] = True
         if ignore_noimage:
             chosen_tpas_index &= ~clean_df['Conjugacy/FOV'].str.contains('no image', na=False)
         if ignore_singlearcs_with_multiple:
-            # TODO: This code is hard to understand. Might be possible to remove apply here too.
-            ignore_idx = clean_df.groupby('event nr').apply(lambda event_df: pd.Series(
-                index=event_df.drop_duplicates('Hemi-sphere').index, name='ignore',
-                data=(multiple_idx := event_df['Conjugacy/FOV'].str.contains('multiple')).any() and event_df.index[0] != event_df.index[multiple_idx][0],
-                dtype=bool))
-            ignore_idx.drop(ignore_idx == False, inplace=True)
-            chosen_tpas_index[ignore_idx.index] = False
-        for i, row in clean_df[chosen_tpas_index].iterrows():
-            # TODO: Use groupby('event nr') to calculate conjugacy type
-            yield TPA()
+            # TODO: This code is probably slow. Might be possible to remove for-loop
+            ignore_idx = []
+            for _, event_df in clean_df.groupby('event nr'):
+                if (multiple_idx := event_df['Conjugacy/FOV'].str.contains('multiple', na=False)).any() and \
+                        event_df.index[0] != event_df.index[multiple_idx][0]:
+                    ignore_idx.append(event_df.index[0])
+            chosen_tpas_index[ignore_idx] = False
+
+        clean_df['dawn/dusk'] = None
+        tpa_count = (clean_df.loc[:, 'X1 dusk':'X4 dawn'].notnull()).sum(axis=1)
+        location = clean_df.loc[tpa_count == 1, 'X1 dusk':'X4 dawn'].sum(axis=1, skipna=True)
+
+        clean_df.loc[(tpa_count == 1) & (location > 220.5), 'dawn/dusk'] = 'dawn'
+        clean_df.loc[(tpa_count == 1) & (location <= 220.5), 'dawn/dusk'] = 'dusk'
+
+        clean_df['conjugate type'] = 'conjugate'
+        clean_df.loc[
+            clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False), 'conjugate type'] = 'non-conjugate'
+        clean_df.loc[
+            clean_df['Conjugacy/FOV'].str.contains('conjugate', na=False), 'conjugate type'] = 'conjugate below'
+        clean_df.loc[clean_df['Conjugacy/FOV'].str.contains('no image', na=False), 'conjugate type'] = ''
+
+        for row in clean_df[chosen_tpas_index].itertuples():
+            yield TPA(dt.datetime.combine(row.Date.date(), row.Time), hemisphere=row[4].lower(), conjugate=row[12],
+                      dadu=row[12])
 
     @staticmethod
     def calc_motion(mlt_start, mlt_end):
