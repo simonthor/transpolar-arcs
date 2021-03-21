@@ -318,7 +318,7 @@ class DataExtract:
                         yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']),
                                   hemisphere=hemisphere, conjugate=conjugate_type, dadu=dadu)
 
-    def new_thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_200805.xlsx', ignore_noimage: bool = True,
+    def new_thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_210318.xlsx', ignore_noimage: bool = True,
                            ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, *args,
                            **kwargs):
         """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions."""
@@ -382,7 +382,7 @@ class DataExtract:
         clean_df.loc[clean_df['Conjugacy/FOV'].str.contains('no image', na=False), 'conjugate type'] = ''
 
         for row in clean_df[chosen_tpas_index].itertuples():
-            yield TPA(dt.datetime.combine(row.Date.date(), row.Time), hemisphere=row[4].lower(), conjugate=row[12],
+            yield TPA(dt.datetime.combine(row.Date.date(), row.Time), hemisphere=row[4].lower(), conjugate=row[13],
                       dadu=row[12])
 
     @staticmethod
