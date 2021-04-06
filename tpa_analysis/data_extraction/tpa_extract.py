@@ -2,6 +2,7 @@
 import warnings
 import datetime as dt
 import re
+from typing import Iterable
 # Packages
 import pandas as pd
 import numpy as np
@@ -14,7 +15,7 @@ class DataExtract:
     """Extracts transpolar arc (TPA) data from different datasets."""
 
     def __init__(self, tpa_dir):
-        self.tpa_dir = tpa_dir
+        self.data_dir = tpa_dir
         self.name_to_function = {'Fear & Milan (2012)': self.fear_dataclean,
                                  'Kullen et al. (2002)': self.kullen_dataclean,
                                  'Cumnock et al. (2009)': self.cumnock2009_dataclean,
@@ -37,7 +38,7 @@ class DataExtract:
     def kullen_dataclean(self, filename="datafile_tpa_location.dat"):
         """Extracting Kullen's data.
          """
-        filename = self.tpa_dir + filename
+        filename = self.data_dir + filename
         with open(filename) as dat:
             kullen = dat.readlines()
 
@@ -60,7 +61,7 @@ class DataExtract:
     def cumnock2009_dataclean(self, filename="Single_Multiple_Arcs_IMF_dipole_list_2015_AK_prel_dadu.xls",
                               usecols="A, C, D, N", sheet_name="Sheet1"):
         """Extracting Cumnock's first dataset."""
-        filename = self.tpa_dir + filename
+        filename = self.data_dir + filename
 
         judy = pd.read_excel(filename, sheet_name=sheet_name, index_col=None, usecols=usecols)
         for index, row in judy.iterrows():
@@ -87,7 +88,7 @@ class DataExtract:
 
     def cumnock2005_dataclean(self, filename="listoftimes.xls", sheet_name="Sheet1", usecols="A, G, M"):
         """Extracting Cumnock's second data."""
-        filename = self.tpa_dir + filename
+        filename = self.data_dir + filename
 
         judy = pd.read_excel(filename, sheet_name=sheet_name, index_col=None, usecols=usecols, skiprows=[1, 2])
 
@@ -133,7 +134,7 @@ class DataExtract:
 
     def fear_dataclean(self, filename='fear_TPA_data_frompaper.txt'):
         """Extracting Fear's data"""
-        filename = self.tpa_dir + filename
+        filename = self.data_dir + filename
 
         if 'frompaper' in filename:
             with open(filename) as fear:
@@ -171,7 +172,7 @@ class DataExtract:
 
     def reidy_dataclean(self, filename='reidy_TPA_data.txt'):
         """Extracts dataset by Reidy et al. (2018)."""
-        filename = self.tpa_dir + filename
+        filename = self.data_dir + filename
         with open(filename) as reidy:
             for line in reidy:
                 if line[0] != '#':
@@ -200,7 +201,7 @@ class DataExtract:
         return pd.concat([southern.iloc[:-1] if pd.notnull(southern['Time']) else northern[:-1], notes])
 
     def thor_dfs(self, filename: str = 'Sept_Oct_2015_TPAs_200716.xlsx', *args, **kwargs):
-        datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
+        datafile = pd.read_excel(self.data_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
 
         # TODO: Slow, do not use apply
@@ -321,8 +322,11 @@ class DataExtract:
     def new_thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_210318.xlsx', ignore_noimage: bool = True,
                            ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, *args,
                            **kwargs):
-        """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions."""
-        raw_datafile = pd.read_excel(self.tpa_dir + filename, *args, **kwargs)
+        """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions.
+        TODO: If conjugate arc is in Conjugacy/FOV column, ignore the hemisphere (almost always SH) where there is no observation but include the one with a TPA (probably NH)
+
+        """
+        raw_datafile = pd.read_excel(self.data_dir + filename, *args, **kwargs)
 
         # Clean data and merge SH columns with NH columns
         merged_sn_df = raw_datafile.replace(' ', pd.NA)
@@ -354,8 +358,7 @@ class DataExtract:
         chosen_tpas_index = pd.Series(index=clean_df.index, data=False, dtype=bool)
         chosen_tpas_index[first_sn_index] = True
         if not only_first_tpa:
-            chosen_tpas_index[clean_df[clean_df['Conjugacy/FOV'].str.contains('multiple', na=False)].drop_duplicates(
-                'event nr').index] = True
+            chosen_tpas_index[clean_df[clean_df['Conjugacy/FOV'].str.contains('multiple', na=False)].index] = True
         if ignore_noimage:
             chosen_tpas_index &= ~clean_df['Conjugacy/FOV'].str.contains('no image', na=False)
         if ignore_singlearcs_with_multiple:
@@ -376,14 +379,38 @@ class DataExtract:
 
         clean_df['conjugate type'] = 'conjugate'
         clean_df.loc[
-            clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False), 'conjugate type'] = 'non-conjugate'
-        clean_df.loc[
             clean_df['Conjugacy/FOV'].str.contains('conjugate', na=False), 'conjugate type'] = 'conjugate below'
+        clean_df.loc[
+            clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False), 'conjugate type'] = 'non-conjugate'
+        print(clean_df[clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False)])
+        clean_df.loc[
+            clean_df['Conjugacy/FOV'].str.contains('multiple', na=False), 'conjugate type'] = 'multiple'
         clean_df.loc[clean_df['Conjugacy/FOV'].str.contains('no image', na=False), 'conjugate type'] = ''
-
+        print('number of TPAs:', chosen_tpas_index.sum())
         for row in clean_df[chosen_tpas_index].itertuples():
             yield TPA(dt.datetime.combine(row.Date.date(), row.Time), hemisphere=row[4].lower(), conjugate=row[13],
                       dadu=row[12])
+
+    def from_cache(self, all_datasets: Iterable):
+        # Load cached data
+        for dataset in all_datasets:
+            dataset.tpa_values = dict(np.load(f'{self.data_dir}{dataset.name}/tpa_values.npz'))
+            dataset.tpa_properties = dict(
+                np.load(f'{self.data_dir}{dataset.name}/tpa_properties.npz', allow_pickle=True))
+            dataset.total = dict(np.load(f'{self.data_dir}{dataset.name}/total.npz'))
+        return all_datasets
+
+    def to_cache(self, all_datasets: Iterable, settings: dict):
+        # cache data
+        for dataset in all_datasets:
+            np.savez(f'{self.data_dir}{dataset.name}/tpa_values.npz', **dataset.tpa_values)
+            np.savez(f'{self.data_dir}{dataset.name}/total.npz', **dataset.total)
+            np.savez(f'{self.data_dir}{dataset.name}/tpa_properties.npz', **dataset.tpa_properties)
+
+        with open('F:/Simon TPA research/cached data/README.txt', 'w') as data_config_file:
+            data_config_file.write(f'Settings used when generating this data:\n')
+            for setting_name, value in settings.items():
+                data_config_file.write(f'{setting_name} = {value}\n')
 
     @staticmethod
     def calc_motion(mlt_start, mlt_end):
