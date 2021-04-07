@@ -8,8 +8,14 @@ from contextlib import contextmanager
 def hist1d(foreground, background, axis: matplotlib.axes.Axes, dataset_name: str, normalize=True,
            nbins: np.ndarray = np.linspace(-20, 20, 40), norm_ymax=10, log=False, bg_label='total IMF'):
     """Plots 1D histogram of e.g. BxGSM.
+    Parameters
+    ----------
     foreground (array_like): data for the TPAs.
     background (array_like): all the data for the IMF during the period of the dataset.
+
+    Returns
+    -------
+    fg_hist_values, bg_hist_values, bins
     """
     foreground = foreground[~np.isnan(foreground)]
     background = background[~np.isnan(background)]
