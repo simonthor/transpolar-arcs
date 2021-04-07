@@ -319,13 +319,10 @@ class DataExtract:
                         yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']),
                                   hemisphere=hemisphere, conjugate=conjugate_type, dadu=dadu)
 
-    def new_thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_210318.xlsx', ignore_noimage: bool = True,
-                           ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, *args,
-                           **kwargs):
-        """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions.
-        TODO: If conjugate arc is in Conjugacy/FOV column, ignore the hemisphere (almost always SH) where there is no observation but include the one with a TPA (probably NH)
-
-        """
+    def new_thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_210407.xlsx', ignore_noimage: bool = True,
+                           ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, debug: bool = False,
+                           *args, **kwargs):
+        """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions."""
         raw_datafile = pd.read_excel(self.data_dir + filename, *args, **kwargs)
 
         # Clean data and merge SH columns with NH columns
@@ -360,20 +357,32 @@ class DataExtract:
         tpa_count = (clean_df.loc[:, 'X1 dusk':'X4 dawn'].notnull()).sum(axis=1)
         location = clean_df.loc[:, 'X1 dusk':'X4 dawn'].sum(axis=1, skipna=True)
         location[tpa_count != 1] = pd.NA
-        print(f'{location.shape=}, {tpa_count.shape=}')
-        print(f'{((tpa_count == 1) & (location > 220.5)).shape=}')
         clean_df.loc[(tpa_count == 1) & (location > 220.5), 'dawn/dusk'] = 'dawn'
         clean_df.loc[(tpa_count == 1) & (location <= 220.5), 'dawn/dusk'] = 'dusk'
-
         clean_df['conjugate type'] = 'conjugate'
+
+        clean_df['Hemi-sphere'] = clean_df['Hemi-sphere'].str.lower()
+
+        # Checks if both N and S are in the event. If they are not, it is a non-conjugate event
+        # TODO: Probably slow but works. Can maybe use the fact that event nr is ordered
         clean_df.loc[
-            clean_df['Conjugacy/FOV'].str.contains('conjugate', na=False), 'conjugate type'] = 'conjugate below'
+            clean_df['event nr'].isin(clean_df['event nr'].unique()[clean_df.groupby('event nr')['Hemi-sphere'].agg(set) != {'n', 's'}])
+            , 'conjugate type'] = 'non-conjugate'
+
         clean_df.loc[
-            clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False), 'conjugate type'] = 'non-conjugate'
-        clean_df.loc[
-            clean_df['Conjugacy/FOV'].str.contains('multiple', na=False), 'conjugate type'] = 'multiple'
+            clean_df['Conjugacy/FOV'].str.contains('conjugate', na=False)
+            & ~clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False), 'conjugate type'] = 'conjugate below'
+
+        # clean_df.loc[
+        #     clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False), 'conjugate type'] = 'non-conjugate'
+
         clean_df.loc[clean_df['Conjugacy/FOV'].str.contains('no image', na=False), 'conjugate type'] = ''
+
+        if debug:
+            yield clean_df
+
         # TODO: remove events with "no event" in the Notes? Ask
+        # TODO: check all bitwise operators to check that no weird broadcasting happens!
 
         first_sn_index = clean_df.reset_index().groupby(['event nr', 'Hemi-sphere']).first()['index'].values
         chosen_tpas_index = pd.Series(index=clean_df.index, data=False, dtype=bool)
@@ -381,6 +390,7 @@ class DataExtract:
         if not only_first_tpa:
             chosen_tpas_index[clean_df[clean_df['Conjugacy/FOV'].str.contains('multiple', na=False)].index] = True
         if ignore_noimage:
+            assert chosen_tpas_index.shape == clean_df['Conjugacy/FOV'].str.contains('no image', na=False).shape
             chosen_tpas_index &= ~clean_df['Conjugacy/FOV'].str.contains('no image', na=False)
         if ignore_singlearcs_with_multiple:
             # TODO: This code is probably slow. Might be possible to remove for-loop
@@ -393,8 +403,8 @@ class DataExtract:
 
         print('number of TPAs:', chosen_tpas_index.sum())
         for row in clean_df[chosen_tpas_index].itertuples():
-            yield TPA(dt.datetime.combine(row.Date.date(), row.Time), hemisphere=row[4].lower(), conjugate=row[13],
-                      dadu=row[12])
+            yield TPA(dt.datetime.combine(row.Date.date(), row.Time), hemisphere=row[4], conjugate=row[13],
+                      dadu=row[12], multiple=True if 'multiple' in str(row[10]).lower() else False)
 
     def from_cache(self, all_datasets: Iterable):
         # Load cached data
