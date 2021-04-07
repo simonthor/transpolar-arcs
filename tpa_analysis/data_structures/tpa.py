@@ -16,11 +16,14 @@ class TPA:
     dadu: str = ''
     moving: str = ''
     conjugate: str = ''
+    multiple: bool = False
     dipole: float = field(init=False, default=np.nan)
     properties: dict = field(init=False)
 
     def __post_init__(self):
-        self.properties = {'date': self.date, 'hemisphere': self.hemisphere, 'dadu': self.dadu, 'moving': self.moving, 'conjugate': self.conjugate}
+        # TODO: automatically add fields here by e.g. using dir()?
+        self.properties = {'date': self.date, 'hemisphere': self.hemisphere, 'dadu': self.dadu, 'moving': self.moving,
+                           'conjugate': self.conjugate, 'multiple': self.multiple}
 
     def get_parameters(self, OMNI_dir: str, parameters: List[str], timeshift: int, avgcalctime: int):
         """Calculates TPA parameters (e.g. 'BxGSM' and adds them to the TPA object
@@ -51,11 +54,6 @@ class TPA:
                 else:
                     setattr(self, key, np.nan)
 
-        # # Adjusting for hemisphere
-        # if hasattr(self, 'BxGSE') and self.hemisphere == 's':
-        #     self.BxGSE *= -1
-        #     self.dipole *= -1
-
     def get_dipole_data(self, avgcalctime: int):
         """Retrieves information about the dipole tile of the Earth during the transpolar arc.
         Inputs:
@@ -67,9 +65,4 @@ class TPA:
 
         dipoles = np.vectorize(get_dipole_tilt)(np.arange(1, avgcalctime+1, dtype=int))
         self.dipole = np.nanmean(dipoles)
-        # dipoles = []
-        # for i in range(avgcalctime):
-        #     t = (self.date - dt.datetime(1970, 1, 1) - dt.timedelta(minutes=i)).total_seconds()
-        #     dipoles.append(180 / np.pi * geopack.recalc(t))
-        #
-        # self.dipole = np.nanmean(dipoles)
+
