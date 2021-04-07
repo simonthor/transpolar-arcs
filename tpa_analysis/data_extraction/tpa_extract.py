@@ -347,11 +347,32 @@ class DataExtract:
         df_with_eventnr = df_with_eventnr.drop(index=linebreak).reset_index()
         df_with_eventnr.rename(columns={'index': 'xlsx row'}, inplace=True)
         df_with_eventnr['xlsx row'] += 2
-
         df_with_eventnr['event nr'] = df_with_eventnr['event nr'].fillna(method='ffill')
+        # Remove rows where there are no TPA coordinates listed
+        tpa_count = (df_with_eventnr.loc[:, 'X1 dusk':'X4 dawn'].notnull()).sum(axis=1)
+        df_with_eventnr = df_with_eventnr[tpa_count != 0]
+
         clean_df = df_with_eventnr.groupby('event nr').filter(
             lambda event_df: not event_df['Conjugacy/FOV'].str.contains('- ignore', na=False).any())
         clean_df.reset_index(drop=True, inplace=True)
+
+        clean_df['dawn/dusk'] = None
+        tpa_count = (clean_df.loc[:, 'X1 dusk':'X4 dawn'].notnull()).sum(axis=1)
+        location = clean_df.loc[:, 'X1 dusk':'X4 dawn'].sum(axis=1, skipna=True)
+        location[tpa_count != 1] = pd.NA
+        print(f'{location.shape=}, {tpa_count.shape=}')
+        print(f'{((tpa_count == 1) & (location > 220.5)).shape=}')
+        clean_df.loc[(tpa_count == 1) & (location > 220.5), 'dawn/dusk'] = 'dawn'
+        clean_df.loc[(tpa_count == 1) & (location <= 220.5), 'dawn/dusk'] = 'dusk'
+
+        clean_df['conjugate type'] = 'conjugate'
+        clean_df.loc[
+            clean_df['Conjugacy/FOV'].str.contains('conjugate', na=False), 'conjugate type'] = 'conjugate below'
+        clean_df.loc[
+            clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False), 'conjugate type'] = 'non-conjugate'
+        clean_df.loc[
+            clean_df['Conjugacy/FOV'].str.contains('multiple', na=False), 'conjugate type'] = 'multiple'
+        clean_df.loc[clean_df['Conjugacy/FOV'].str.contains('no image', na=False), 'conjugate type'] = ''
         # TODO: remove events with "no event" in the Notes? Ask
 
         first_sn_index = clean_df.reset_index().groupby(['event nr', 'Hemi-sphere']).first()['index'].values
@@ -370,22 +391,6 @@ class DataExtract:
                     ignore_idx.append(event_df.index[0])
             chosen_tpas_index[ignore_idx] = False
 
-        clean_df['dawn/dusk'] = None
-        tpa_count = (clean_df.loc[:, 'X1 dusk':'X4 dawn'].notnull()).sum(axis=1)
-        location = clean_df.loc[tpa_count == 1, 'X1 dusk':'X4 dawn'].sum(axis=1, skipna=True)
-
-        clean_df.loc[(tpa_count == 1) & (location > 220.5), 'dawn/dusk'] = 'dawn'
-        clean_df.loc[(tpa_count == 1) & (location <= 220.5), 'dawn/dusk'] = 'dusk'
-
-        clean_df['conjugate type'] = 'conjugate'
-        clean_df.loc[
-            clean_df['Conjugacy/FOV'].str.contains('conjugate', na=False), 'conjugate type'] = 'conjugate below'
-        clean_df.loc[
-            clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False), 'conjugate type'] = 'non-conjugate'
-        print(clean_df[clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False)])
-        clean_df.loc[
-            clean_df['Conjugacy/FOV'].str.contains('multiple', na=False), 'conjugate type'] = 'multiple'
-        clean_df.loc[clean_df['Conjugacy/FOV'].str.contains('no image', na=False), 'conjugate type'] = ''
         print('number of TPAs:', chosen_tpas_index.sum())
         for row in clean_df[chosen_tpas_index].itertuples():
             yield TPA(dt.datetime.combine(row.Date.date(), row.Time), hemisphere=row[4].lower(), conjugate=row[13],
