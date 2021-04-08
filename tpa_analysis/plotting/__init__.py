@@ -20,3 +20,14 @@ def get_pvalue_text(p_value: float, decimals: int = 4) -> str:
     if 0.01 < p_value:
         return (p_str + 'f') % p_value
     return (p_str + 'e') % p_value
+
+
+def subplot_label(ax, letter=None, x=-0.07, y=1.02):
+    """Add a, b, c etc to subplot"""
+    if not isinstance(ax, np.ndarray):
+        ax = np.array([ax])
+
+    for a, l in zip(ax.flat, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' if letter is None else letter):
+        a.text(x, y, l, transform=a.transAxes, fontsize='xx-large', fontweight='bold')
+
+
