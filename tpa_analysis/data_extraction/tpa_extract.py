@@ -21,7 +21,7 @@ class DataExtract:
                                  'Cumnock et al. (2009)': self.cumnock2009_dataclean,
                                  'Reidy et al. (2018)': self.reidy_dataclean,
                                  'Cumnock (2005)': self.cumnock2005_dataclean,
-                                 'New dataset': self.thor_dataclean,
+                                 'New dataset': self.new_thor_dataclean,
                                  'This study': self.new_thor_dataclean}
 
     def get_tpas(self, dataset_name: str, *args, **kwargs):
@@ -380,9 +380,6 @@ class DataExtract:
 
         if debug:
             yield clean_df
-
-        # TODO: remove events with "no event" in the Notes? Ask
-        # TODO: check all bitwise operators to check that no weird broadcasting happens!
 
         first_sn_index = clean_df.reset_index().groupby(['event nr', 'Hemi-sphere']).first()['index'].values
         chosen_tpas_index = pd.Series(index=clean_df.index, data=False, dtype=bool)
