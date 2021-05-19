@@ -200,7 +200,7 @@ class DataExtract:
         notes.index = ['Note N', 'Note S', 'Conjugacy/FOV']
         return pd.concat([southern.iloc[:-1] if pd.notnull(southern['Time']) else northern[:-1], notes])
 
-    def thor_dfs(self, filename: str = 'Sept_Oct_2015_TPAs_200716.xlsx', *args, **kwargs):
+    def thor_dfs(self, filename: str = 'Sept_Oct_2015_TPAs_final_210518.xlsx', *args, **kwargs):
         datafile = pd.read_excel(self.data_dir + filename, *args, **kwargs)
         datafile.replace(' ', np.nan, inplace=True)
 
@@ -237,7 +237,7 @@ class DataExtract:
 
         return tpa_dfs
 
-    def thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_200716.xlsx', ignore_noimage: bool = True,
+    def thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_final_210518.xlsx', ignore_noimage: bool = True,
                        ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, *args, **kwargs):
         """TODO: add docstring"""
         tpa_dfs = self.thor_dfs(filename, *args, **kwargs)
@@ -319,9 +319,9 @@ class DataExtract:
                         yield TPA(dt.datetime.combine(first_detection['Date'].date(), first_detection['Time']),
                                   hemisphere=hemisphere, conjugate=conjugate_type, dadu=dadu)
 
-    def new_thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_210407.xlsx', ignore_noimage: bool = True,
+    def new_thor_dataclean(self, filename: str = 'Sept_Oct_2015_TPAs_final_210518.xlsx', ignore_noimage: bool = True,
                            ignore_singlearcs_with_multiple: bool = False, only_first_tpa: bool = False, debug: bool = False,
-                           *args, **kwargs):
+                           ignore_single_image: bool = False, *args, **kwargs):
         """More efficient TPA extracter with cleaner code. This will become `thor_dataclean` in future versions."""
         raw_datafile = pd.read_excel(self.data_dir + filename, *args, **kwargs)
 
@@ -365,6 +365,7 @@ class DataExtract:
 
         # Checks if both N and S are in the event. If they are not, it is a non-conjugate event
         # TODO: Probably slow but works. Can maybe use the fact that event nr is ordered
+        # TODO: if ignore_single_image is True, this might need to be changed
         clean_df.loc[
             clean_df['event nr'].isin(clean_df['event nr'].unique()[clean_df.groupby('event nr')['Hemi-sphere'].agg(set) != {'n', 's'}])
             , 'conjugate type'] = 'non-conjugate'
@@ -372,9 +373,6 @@ class DataExtract:
         clean_df.loc[
             clean_df['Conjugacy/FOV'].str.contains('conjugate', na=False)
             & ~clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False), 'conjugate type'] = 'conjugate below'
-
-        # clean_df.loc[
-        #     clean_df['Conjugacy/FOV'].str.contains('non-conjugate', na=False), 'conjugate type'] = 'non-conjugate'
 
         clean_df.loc[clean_df['Conjugacy/FOV'].str.contains('no image', na=False), 'conjugate type'] = ''
 
@@ -391,12 +389,15 @@ class DataExtract:
             chosen_tpas_index &= ~clean_df['Conjugacy/FOV'].str.contains('no image', na=False)
         if ignore_singlearcs_with_multiple:
             # TODO: This code is probably slow. Might be possible to remove for-loop
-            ignore_idx = []
             for _, event_df in clean_df.groupby('event nr'):
                 if (multiple_idx := event_df['Conjugacy/FOV'].str.contains('multiple', na=False)).any() and \
                         event_df.index[0] != event_df.index[multiple_idx][0]:
-                    ignore_idx.append(event_df.index[0])
-            chosen_tpas_index[ignore_idx] = False
+                    chosen_tpas_index[event_df.index[0]] = False
+        if ignore_single_image:
+            # TODO: This code is probably slow. Might be possible to remove for-loop
+            for i, event in clean_df.groupby(['event nr', 'Hemi-sphere']):
+                if event.shape[0] <= 1:
+                    chosen_tpas_index[event.index[0]] = False
 
         print('number of TPAs:', chosen_tpas_index.sum())
         for row in clean_df[chosen_tpas_index].itertuples():
